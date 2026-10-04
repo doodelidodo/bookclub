@@ -102,6 +102,47 @@ const key = (moves) => { const c = new Chess(); moves.split(" ").filter(Boolean)
     console.log("  " + f + ": " + Object.keys(pack.pos).length + " positions, " + mine.length + " to learn");
   }
 
+  section("4b levels");
+  {
+    check("level tag parsed", JSON.stringify(R.parseLevel("level 2: de: Zwei || en: Two")) === '{"n":2,"name":{"de":"Zwei","en":"Two"}}');
+    check("level tag without name", R.parseLevel("level 3").n === 3 && R.parseLevel("level 3").name === null);
+    check("normal comment is no level", R.parseLevel("de: Text || en: Text") === null);
+    const pgn = '[Side "white"]\n[Level1De "Eins"]\n[Level1En "One"]\n1. e4 e5 (1... c5 {level 3: de: Drei || en: Three} 2. Nc3) (1... e6 {level 2: de: Zwei || en: Two} 2. d4) 2. Nf3 Nc6 (2... d6 {level 2} 3. d4) 3. Bb5 *';
+    const { pack } = R.packFromPgn(pgn, Chess);
+    const L = R.assignLevels(pack);
+    check("levels in order with names", L.levels.map((l) => l.n + ":" + l.name.en).join(",") === "1:One,2:Two,3:Three", L.levels);
+    check("tagged reply starts its level", L.levelOf[key("e4 c5")] === 3 && L.levelOf[key("e4 e6")] === 2);
+    check("untagged moves inherit", L.levelOf[key("e4 e5 Nf3 Nc6")] === 1 && L.levelOf[key("e4 e5 Nf3 d6")] === 2);
+    check("level sizes count own moves", L.levels.map((l) => l.size).join(",") === "3,2,1", L.levels.map((l) => l.size));
+    // Transposition: reachable in level 1 and level 2 -> level 1
+    const tr = R.packFromPgn('[Side "black"]\n1. e4 c6 2. d4 (2. Nc3 {level 2} d5 3. d4) 2... d5 *', Chess);
+    const TL = R.assignLevels(tr.pack);
+    check("transposition takes the lower level", TL.levelOf[key("e4 c6 d4 d5")] === 1);
+    // Explorer reply next to tagged ones takes the highest sibling level
+    const ex = R.packFromPgn('[Side "white"]\n1. e4 e5 (1... c5 {level 2} 2. Nc3) (1... e6 {level 3} 2. d4) 2. Nf3 *', Chess);
+    const kE4 = key("e4");
+    const c = new Chess(); c.move("e4"); c.move("d5");
+    ex.pack.pos[kE4].m.push({ s: "d5", u: "d7d5", t: R.fenKey(c.fen()), x: 1 });
+    ex.pack.pos[R.fenKey(c.fen())] = { m: [{ s: "exd5", u: "e4d5", t: "x" }] };
+    ex.pack.pos["x"] = { m: [] };
+    check("explorer reply joins the highest sibling level", R.assignLevels(ex.pack).levelOf[R.fenKey(c.fen())] === 3);
+    // Own import without tags: automatic levels at the first choice
+    const auto = R.packFromPgn('[Side "white"]\n1. e4 e5 (1... c5 2. Nf3) (1... e6 2. d4) 2. Nf3 *', Chess);
+    const AL = R.assignLevels(auto.pack);
+    check("automatic levels for imports", AL.auto && AL.levels.length === 3 && /e5/.test(AL.levels[0].name.en), AL.levels.map((l) => l.name.en));
+    for (const f of ["vienna", "caro-kann", "slav"]) {
+      const sh = fs.readFileSync(path.join(ROOT, "packs", f + ".js"), "utf8");
+      const pk = JSON.parse(sh.slice(sh.indexOf(".push(") + 6, sh.lastIndexOf(");")));
+      const PL = R.assignLevels(pk);
+      check(f + " shipped pack has named levels", PL.levels.length >= 5 && PL.levels.every((l) => l.name.de && l.name.en && !/^Level /.test(l.name.de)), PL.levels.map((l) => l.name.de));
+      check(f + " level 1 is small", PL.levels[0].size <= 10, PL.levels[0].size);
+    }
+    const S = require("../js/sync.js");
+    const mp = S.merge({ v: 1, cards: {}, path: { vienna: { passed: { 1: 100 } } } }, { v: 1, cards: {}, path: { vienna: { passed: { 1: 50, 2: 200 } } }, resetAt: 0 });
+    check("passed levels merge (union, earliest)", mp.path.vienna.passed[1] === 50 && mp.path.vienna.passed[2] === 200);
+    check("reset clears passed levels", Object.keys(S.merge({ v: 1, cards: {}, path: { vienna: { passed: { 1: 100 } } } }, { v: 1, cards: {}, resetAt: 150 }).path).length === 0);
+  }
+
   section("5 explorer extension (fake explorer)");
   {
     // Fake explorer: every legal move, the first ones most popular; one move scores terribly.

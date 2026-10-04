@@ -4,6 +4,9 @@
  *   node tools/build-pack.js repertoire/vienna.pgn                 # PGN only, no network
  *   node tools/build-pack.js repertoire/vienna.pgn --explorer      # + Lichess opening explorer
  *   node tools/build-pack.js repertoire/*.pgn --explorer           # several at once
+ *   node tools/build-pack.js repertoire/*.pgn --update             # PGN changed (comments, levels,
+ *                                                                  # a move): keep the Lichess data
+ *                                                                  # already in packs/, no network
  *
  * With --explorer the script walks the repertoire and asks the Lichess
  * opening explorer, position by position, what players at the chosen rating
@@ -51,6 +54,7 @@ function parseArgs(argv) {
     const a = argv[i];
     const next = () => argv[++i];
     if (a === "--explorer") opts.explorer = true;
+    else if (a === "--update") opts.update = true;
     else if (a === "--ratings") opts.ratings = next();
     else if (a === "--speeds") opts.speeds = next();
     else if (a === "--max-ply") opts.maxPly = Number(next());
@@ -257,6 +261,43 @@ async function extendWithExplorer(pack, opts, warnings) {
   return requests;
 }
 
+function readPack(file) {
+  const src = fs.readFileSync(file, "utf8");
+  return JSON.parse(src.slice(src.indexOf(".push(") + 6, src.lastIndexOf(");")));
+}
+
+/**
+ * Puts the explorer data of an older build onto a pack fresh from the PGN:
+ * game counts and opening names, and the moves the explorer added. The PGN
+ * wins wherever both say something about your own move.
+ */
+function mergeExplorerData(pack, old) {
+  let kept = 0;
+  Object.keys(old.pos).forEach((k) => {
+    const o = old.pos[k];
+    if (!pack.pos[k]) pack.pos[k] = { m: [] };
+    const p = pack.pos[k];
+    if (o.g !== undefined) p.g = o.g;
+    if (o.o) p.o = o.o;
+    const mine = R.sideOf(k) === pack.side;
+    o.m.forEach((e) => {
+      const hit = p.m.find((x) => x.u === e.u);
+      if (hit) {
+        ["n", "w", "d", "b"].forEach((f) => { if (e[f] !== undefined) hit[f] = e[f]; });
+        return;
+      }
+      if (!e.x) return;                       // was in the old PGN, removed since: stays removed
+      if (mine && p.m.length) return;         // the PGN has its own move here
+      p.m.push(Object.assign({}, e));
+      if (!pack.pos[e.t]) pack.pos[e.t] = { m: [] };
+      kept++;
+    });
+    if (!mine) p.m.sort((a, b) => (b.n || 0) - (a.n || 0));
+  });
+  pack.built = old.built;
+  return kept;
+}
+
 function prune(pack) {
   // Drop positions that are no longer reachable along repertoire edges.
   const keep = new Set(R.topoOrder(pack));
@@ -283,6 +324,11 @@ async function main() {
         ratings: opts.ratings, speeds: opts.speeds, minShare: opts.minShare, maxPly: opts.maxPly
       };
       console.log("  " + n + " positions looked up");
+    } else if (opts.update) {
+      const oldFile = path.join(opts.out, pack.id + ".js");
+      if (!fs.existsSync(oldFile)) throw new Error("--update needs an existing " + oldFile);
+      const kept = mergeExplorerData(pack, readPack(oldFile));
+      console.log("  kept " + kept + " explorer moves from " + path.relative(process.cwd(), oldFile));
     }
     prune(pack);
     const errors = R.validatePack(pack);
@@ -307,4 +353,4 @@ async function main() {
 if (require.main === module) {
   main().catch((e) => { console.error("\n" + e.message); process.exit(1); });
 }
-module.exports = { extendWithExplorer, prune, explorer, normalizeMoves };
+module.exports = { extendWithExplorer, prune, explorer, normalizeMoves, mergeExplorerData };

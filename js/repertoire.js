@@ -16,10 +16,12 @@
  *                n?: games, w?, d?, b?,         // explorer stats (white wins / draws / black wins)
  *                c?: {de, en},                  // comment shown after the move
  *                x?: 1,                         // added from the explorer, not in the PGN
- *                a?: 1 } ],                     // repertoire move picked by the script, please review
+ *                a?: 1,                         // repertoire move picked by the script, please review
+ *                lv?: n } ],                    // this move starts level n ({level n: …} in the PGN)
  *         g?: games in this position, o?: opening name
  *       }
- *     }
+ *     },
+ *     levels?: { <n>: {de, en} }                // names of the levels (path), see assignLevels
  *   }
  * In positions where the repertoire side is to move, m[0] is the repertoire move.
  */
@@ -51,6 +53,15 @@
     m = /^en:\s*([\s\S]*?)\s*\|\|\s*de:\s*([\s\S]*)$/i.exec(text);
     if (m) return { de: m[2].trim(), en: m[1].trim() };
     return { de: text, en: text };
+  }
+
+  /** "{level 2: de: Wenn Schwarz nimmt || en: When Black takes}" or "{level 2}" -> {n, name} */
+  function parseLevel(raw) {
+    var m = /^\s*level\s+(\d+)\s*(?::\s*([\s\S]*))?$/i.exec(raw);
+    if (!m) return null;
+    var n = Number(m[1]);
+    if (!(n >= 1 && n <= 99)) return null;
+    return { n: n, name: m[2] ? parseComment(m[2]) : null };
   }
 
   /** Splits PGN into headers and movetext tokens. */
@@ -103,8 +114,26 @@
       blurb: { de: headers.BlurbDe || "", en: headers.BlurbEn || "" },
       built: { at: new Date().toISOString().slice(0, 10), source: "pgn" },
       root: fenKey(headers.FEN || START_FEN),
-      pos: {}
+      pos: {},
+      levels: levelsFromHeaders(headers)
     };
+  }
+
+  // [Level1De "Die Grundidee"] [Level1En "The main idea"]
+  function levelsFromHeaders(headers) {
+    var out = {};
+    Object.keys(headers).forEach(function (k) {
+      var m = /^Level(\d+)(De|En)$/.exec(k);
+      if (!m) return;
+      var n = Number(m[1]);
+      out[n] = out[n] || {};
+      out[n][m[2].toLowerCase()] = headers[k];
+    });
+    Object.keys(out).forEach(function (n) {
+      out[n].de = out[n].de || out[n].en;
+      out[n].en = out[n].en || out[n].de;
+    });
+    return out;
   }
 
   function ensurePos(pack, key) {
@@ -155,6 +184,7 @@
     var frame = { fen: startFen, before: null, edge: null };
     var stack = [];
     var pendingComment = null;
+    var pendingLevel = null;
 
     parsed.tokens.forEach(function (tok) {
       if (tok.type === "(") {
@@ -169,6 +199,13 @@
         return;
       }
       if (tok.type === "comment") {
+        var lv = parseLevel(tok.text);
+        if (lv) {
+          if (lv.name && !pack.levels[lv.n]) pack.levels[lv.n] = lv.name;
+          if (frame.edge) frame.edge.lv = lv.n;
+          else pendingLevel = lv.n;
+          return;
+        }
         var c = parseComment(tok.text);
         if (!c) return;
         if (frame.edge) frame.edge.c = c;
@@ -185,7 +222,9 @@
       var toKey = fenKey(board.fen());
       var edge = addEdge(pack, fromKey, { s: move.san, u: uciOf(move) }, toKey, warnings, "line " + tok.line);
       if (edge && pendingComment) { edge.c = pendingComment; }
+      if (edge && pendingLevel) { edge.lv = pendingLevel; }
       pendingComment = null;
+      pendingLevel = null;
       frame = { fen: board.fen(), before: frame.fen, edge: edge };
     });
     if (stack.length) throw new Error("Unclosed variation at end of PGN");
@@ -269,6 +308,82 @@
     return d;
   }
 
+  /**
+   * Which level each position belongs to, and the list of levels.
+   *
+   * A tagged move (edge.lv) starts its level; everything after it inherits it.
+   * Opponent replies the explorer added (x) next to tagged replies take the
+   * highest sibling level, so a rare reply never lands in level 1 by accident.
+   * Reached by several move orders: the lowest level wins.
+   *
+   * Packs without tags (own imports) get levels automatically: at the first
+   * position where the opponent has a choice, each reply becomes a level, most
+   * played first.
+   */
+  function assignLevels(pack) {
+    var tagged = Object.keys(pack.pos).some(function (k) { return pack.pos[k].m.some(function (e) { return e.lv; }); });
+    var edgeLevel = {};          // "fromKey|uci" -> level
+    var names = {};
+    Object.keys(pack.levels || {}).forEach(function (n) { names[n] = pack.levels[n]; });
+    var auto = false;
+
+    if (tagged) {
+      Object.keys(pack.pos).forEach(function (k) {
+        var m = pack.pos[k].m;
+        var maxSib = 0;
+        m.forEach(function (e) { if (e.lv) maxSib = Math.max(maxSib, e.lv); });
+        m.forEach(function (e) {
+          if (e.lv) edgeLevel[k + "|" + e.u] = e.lv;
+          else if (e.x && maxSib && sideOf(k) !== pack.side) edgeLevel[k + "|" + e.u] = maxSib;
+        });
+      });
+    } else {
+      // Walk the main line until the opponent has a choice.
+      var key = pack.root, guard = 0;
+      while (pack.pos[key] && pack.pos[key].m.length && guard++ < 200) {
+        var pos = pack.pos[key];
+        if (sideOf(key) === pack.side || pos.m.length === 1) { key = pos.m[0].t; continue; }
+        var w = replyWeights(pos);
+        var order = pos.m.map(function (e, i) { return i; }).sort(function (a, b) { return w[b] - w[a]; });
+        var moveNo = Number(keyToFen(key).split(" ")[5]) || 1;
+        order.forEach(function (idx, rank) {
+          var e = pos.m[idx];
+          var n = rank + 1;
+          edgeLevel[key + "|" + e.u] = n;
+          var label = moveLabel(key, e.s);
+          if (!names[n]) names[n] = rank === 0 ? { de: "Hauptlinie mit " + label, en: "Main line with " + label } : { de: "Gegen " + label, en: "Against " + label };
+        });
+        auto = order.length > 1;
+        break;
+      }
+    }
+
+    var levelOf = {};
+    levelOf[pack.root] = 1;
+    topoOrder(pack).forEach(function (k) {
+      var pos = pack.pos[k];
+      var here = levelOf[k];
+      if (!pos || here === undefined) return;
+      var edges = sideOf(k) === pack.side ? pos.m.slice(0, 1) : pos.m;
+      edges.forEach(function (e) {
+        var l = edgeLevel[k + "|" + e.u] || here;
+        if (levelOf[e.t] === undefined || l < levelOf[e.t]) levelOf[e.t] = l;
+      });
+    });
+
+    var used = {};
+    myPositions(pack).forEach(function (k) { if (levelOf[k] !== undefined) used[levelOf[k]] = (used[levelOf[k]] || 0) + 1; });
+    var levels = Object.keys(used).map(Number).sort(function (a, b) { return a - b; }).map(function (n, i) {
+      return { n: n, index: i + 1, size: used[n], name: names[n] || { de: "Level " + (i + 1), en: "Level " + (i + 1) } };
+    });
+    return { levelOf: levelOf, levels: levels, auto: auto };
+  }
+
+  function moveLabel(key, san) {
+    var parts = keyToFen(key).split(" ");
+    return parts[1] === "w" ? "1." + san : "1…" + san;
+  }
+
   function validatePack(pack) {
     var errors = [];
     if (!pack || pack.v !== 1) errors.push("not a version 1 pack");
@@ -298,6 +413,8 @@
     topoOrder: topoOrder,
     depths: depths,
     validatePack: validatePack,
+    parseLevel: parseLevel,
+    assignLevels: assignLevels,
     uciOf: uciOf
   };
 });

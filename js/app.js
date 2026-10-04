@@ -59,7 +59,18 @@
       pgnSide: "Ich spiele", pgnName: "Name", pgnFile: "oder Datei wählen", pgnAdd: "Hinzufügen",
       pgnOk: "{name}: {n} Stellungen zum Lernen.", pgnFail: "Konnte die PGN nicht lesen: {e}",
       customs: "Eigene Repertoires", remove: "Entfernen", removeConfirm: "{name} und den Lernstand dazu entfernen?",
-      emptyPacks: "Keine Eröffnung im Training. Schalte unten eine ein."
+      emptyPacks: "Keine Eröffnung im Training. Schalte unten eine ein.",
+      path: "Pfad", levelOf: "Level {i} von {n}", allLevels: "Alle Levels geschafft",
+      lvDone: "geschafft", lvCurrent: "aktuell", lvLocked: "gesperrt",
+      lvMoves: "{s} von {n} Zügen gefestigt", lvSeen: "{n} Züge", lvLearnFirst: "Noch {n} neue Züge lernen",
+      lvSettle: "{n} Züge müssen noch einen Tag halten", lvReady: "Bereit für die Prüfung",
+      lvExam: "Prüfung starten", lvExamAgain: "Prüfung wiederholen", lvTrain: "Üben", lvUnlock: "Bestehe die Prüfung von Level {i}, dann öffnet sich dieses Level.",
+      lvExamTitle: "Prüfung: {name}", lvPass: "Bestanden! Level {i} ist geschafft.", lvNext: "Weiter geht es mit: {name}",
+      lvFinal: "Das war das letzte Level dieser Eröffnung.",
+      lvFail: "{r} von {n} richtig, {k} braucht es. Die falschen kommen jetzt öfter in der Wiederholung.",
+      lvNeed: "{k} von {n} richtig zum Bestehen", lvToPath: "Zum Pfad",
+      examReadyBanner: "Prüfung bereit: {pack}, Level {i}", examReadyGo: "Jetzt prüfen",
+      pathHelp: "Neue Züge kommen nur aus dem aktuellen Level. Sitzen alle seine Züge (einen Tag gehalten), kommt die Prüfung: 8 von 10 richtig öffnet das nächste Level. Wiederholt wird immer alles, was du schon kennst."
     },
     en: {
       tagline: "Your opening repertoire, drilled until it sticks.",
@@ -110,7 +121,18 @@
       pgnSide: "I play", pgnName: "Name", pgnFile: "or choose a file", pgnAdd: "Add",
       pgnOk: "{name}: {n} positions to learn.", pgnFail: "Could not read the PGN: {e}",
       customs: "Your repertoires", remove: "Remove", removeConfirm: "Remove {name} and its progress?",
-      emptyPacks: "No opening in training. Switch one on below."
+      emptyPacks: "No opening in training. Switch one on below.",
+      path: "Path", levelOf: "Level {i} of {n}", allLevels: "All levels done",
+      lvDone: "done", lvCurrent: "current", lvLocked: "locked",
+      lvMoves: "{s} of {n} moves settled", lvSeen: "{n} moves", lvLearnFirst: "{n} new moves to learn",
+      lvSettle: "{n} moves still have to hold for a day", lvReady: "Ready for the test",
+      lvExam: "Start test", lvExamAgain: "Retake test", lvTrain: "Train", lvUnlock: "Pass the test of level {i} to open this level.",
+      lvExamTitle: "Test: {name}", lvPass: "Passed! Level {i} is done.", lvNext: "Up next: {name}",
+      lvFinal: "That was the last level of this opening.",
+      lvFail: "{r} of {n} right, {k} needed. The ones you missed come back more often in your reviews.",
+      lvNeed: "{k} of {n} right to pass", lvToPath: "Back to the path",
+      examReadyBanner: "Test ready: {pack}, level {i}", examReadyGo: "Take it now",
+      pathHelp: "New moves only come from the current level. Once all its moves are settled (held for a day), the test opens: 8 of 10 right unlocks the next level. Reviews always cover everything you already know."
     }
   };
 
@@ -131,7 +153,8 @@
       custom: [],         // imported packs
       settingsAt: 0,      // when language or settings last changed (for merging devices)
       resetAt: 0,         // "reset everything": older answers stay gone
-      removed: {}         // packId -> when an own repertoire was removed
+      removed: {},        // packId -> when an own repertoire was removed
+      path: {}            // packId -> { passed: { levelNumber: timestamp } }
     };
   }
   var state = load();
@@ -327,10 +350,61 @@
       });
       var mine = R.myPositions(p).filter(function (k) { return depth[k] !== undefined; });
       mine.sort(function (a, b) { return (reach[b] || 0) - (reach[a] || 0) || depth[a] - depth[b]; });
-      meta[p.id] = { mine: mine, reach: reach, depth: depth, parents: parents };
+      var lv = R.assignLevels(p);
+      meta[p.id] = { mine: mine, reach: reach, depth: depth, parents: parents, levelOf: lv.levelOf, levels: lv.levels };
     });
   }
   function packById(id) { return packs.filter(function (p) { return p.id === id; })[0]; }
+
+  // ------------------------------------------------------------------ path / levels
+  var SETTLE_BOX = 2;           // a move counts as settled once it held for a day
+  function passedLevels(pack) {
+    var p = state.path && state.path[pack.id];
+    return (p && p.passed) || {};
+  }
+  /** The level you are on: the first one whose test is not passed yet (null when all are). */
+  function currentLevel(pack) {
+    var passed = passedLevels(pack);
+    var levels = meta[pack.id].levels;
+    for (var i = 0; i < levels.length; i++) if (!passed[levels[i].n]) return levels[i];
+    return null;
+  }
+  function levelIndexOf(pack, key) {
+    var n = meta[pack.id].levelOf[key];
+    var lv = meta[pack.id].levels.filter(function (l) { return l.n === n; })[0];
+    return lv ? lv.index : 1;
+  }
+  /** Positions you may learn new moves in: passed levels and the current one. */
+  function unlocked(pack, key) {
+    var cur = currentLevel(pack);
+    return !cur || levelIndexOf(pack, key) <= cur.index;
+  }
+  function levelStats(pack, lv) {
+    var out = { total: 0, seen: 0, settled: 0, due: 0, keys: [] };
+    meta[pack.id].mine.forEach(function (k) {
+      if (meta[pack.id].levelOf[k] !== lv.n) return;
+      out.total++;
+      out.keys.push(k);
+      var c = card(pack, k);
+      if (c) { out.seen++; if (c.box >= SETTLE_BOX) out.settled++; if (isDue(c)) out.due++; }
+    });
+    out.ready = out.total > 0 && out.settled === out.total;
+    return out;
+  }
+  function readyExams() {
+    var out = [];
+    activePacks().forEach(function (p) {
+      var cur = currentLevel(p);
+      if (cur && levelStats(p, cur).ready) out.push({ pack: p, level: cur });
+    });
+    return out;
+  }
+  function passLevel(pack, lv) {
+    state.path = state.path || {};
+    state.path[pack.id] = state.path[pack.id] || { passed: {} };
+    state.path[pack.id].passed[lv.n] = Date.now();
+    save();
+  }
   function activePacks() { return packs.filter(function (p) { return !state.off[p.id]; }); }
 
   function cardId(pack, key) { return pack.id + "|" + key; }
@@ -365,7 +439,7 @@
    */
   function pickNew(budget) {
     var lists = activePacks().map(function (p) {
-      return { p: p, keys: meta[p.id].mine.filter(function (k) { return !card(p, k); }) };
+      return { p: p, keys: meta[p.id].mine.filter(function (k) { return !card(p, k) && unlocked(p, k); }) };
     });
     var picked = {}, out = [], i = 0, guard = 0;
     function known(p, k) { return !!card(p, k) || !!picked[cardId(p, k)]; }
@@ -450,6 +524,7 @@
       dueTotal += c.due;
       newAvail += c.unseen;
     });
+    newAvail = pickNew(9999).length;          // only what the current levels allow
     var fresh = Math.min(newBudgetLeft(), newAvail);
     var settled = 0;
     packs.forEach(function (p) { meta[p.id].mine.forEach(function (k) { var c = card(p, k); if (c && c.box >= 2) settled++; }); });
@@ -468,6 +543,11 @@
     }
     html += "</div></section>";
 
+    readyExams().forEach(function (r) {
+      html += '<section class="banner"><span>' + esc(t("examReadyBanner", { pack: loc(r.pack.name), i: r.level.index })) + " · " + esc(loc(r.level.name)) +
+        '</span><button class="btn small primary" data-levelexam="' + esc(r.pack.id) + '">' + esc(t("examReadyGo")) + "</button></section>";
+    });
+
     html += '<div class="section-title"><h2>' + esc(t("packsTitle")) + "</h2></div><div class=\"packs\">";
     packs.forEach(function (p) {
       var c = packCounts(p);
@@ -481,9 +561,10 @@
         '<div class="head"><div><h3>' + esc(loc(p.name)) + '</h3><span class="side"><i class="' + p.side + '"></i>' + esc(p.side === "w" ? t("white") : t("black")) + "</span></div>" +
         (c.due ? '<span class="due-tag">' + esc(t("dueTag", { n: c.due })) + "</span>" : "") + "</div>" +
         '<p class="blurb">' + esc(loc(p.blurb)) + "</p>" +
+        levelLine(p) +
         '<div class="bar" aria-hidden="true"><span class="learned" style="width:' + pctL + '%"></span><span class="learning" style="width:' + pctG + '%"></span></div>' +
         '<div class="legend"><span><i class="learned"></i><b>' + c.learned + "</b> " + esc(t("learned")) + '</span><span><i class="learning"></i><b>' + c.learning + "</b> " + esc(t("learning")) + '</span><span><i class="new"></i><b>' + c.unseen + "</b> " + esc(t("unseen")) + "</span></div>" +
-        '<div class="row"><button class="btn small secondary" data-train="' + esc(p.id) + '">' + esc(t("train")) + '</button><button class="btn small ghost" data-browse="' + esc(p.id) + '">' + esc(t("browse")) + "</button></div>" +
+        '<div class="row"><button class="btn small secondary" data-path="' + esc(p.id) + '">' + esc(t("path")) + '</button><button class="btn small ghost" data-train="' + esc(p.id) + '">' + esc(t("train")) + '</button><button class="btn small ghost" data-browse="' + esc(p.id) + '">' + esc(t("browse")) + "</button></div>" +
         '<label class="toggle"><input type="checkbox" data-toggle="' + esc(p.id) + '"' + (state.off[p.id] ? "" : " checked") + "> " + esc(t("active")) + "</label>" +
         '<p class="packnote">' + esc(note) + "</p>" +
         (autos ? '<p class="packnote warn">' + esc(t("autoNote", { n: autos })) + "</p>" : "") +
@@ -503,12 +584,68 @@
     on("#ownBtn", function () { openSettings(true); });
     view.querySelectorAll("[data-train]").forEach(function (b) { b.onclick = function () { startSession(b.dataset.train); }; });
     view.querySelectorAll("[data-browse]").forEach(function (b) { b.onclick = function () { startBrowse(b.dataset.browse); }; });
+    view.querySelectorAll("[data-path]").forEach(function (b) { b.onclick = function () { renderPath(b.dataset.path); }; });
+    view.querySelectorAll("[data-levelexam]").forEach(function (b) {
+      b.onclick = function () { var p = packById(b.dataset.levelexam); startLevelExam(p, currentLevel(p)); };
+    });
     view.querySelectorAll("[data-toggle]").forEach(function (b) {
       b.onchange = function () { if (b.checked) delete state.off[b.dataset.toggle]; else state.off[b.dataset.toggle] = true; touchSettings(); save(); renderHome(); };
     });
     window.scrollTo(0, 0);
   }
   function on(sel, fn) { var el = view.querySelector(sel); if (el) el.onclick = fn; }
+
+  function levelLine(p) {
+    var levels = meta[p.id].levels, cur = currentLevel(p);
+    var dots = levels.map(function (l) {
+      var passed = passedLevels(p)[l.n];
+      return '<i class="' + (passed ? "done" : cur && cur.n === l.n ? "cur" : "") + '"></i>';
+    }).join("");
+    var label = cur ? t("levelOf", { i: cur.index, n: levels.length }) + " · " + loc(cur.name) : t("allLevels");
+    return '<div class="levelline"><span class="dots" aria-hidden="true">' + dots + '</span><span>' + esc(label) + "</span></div>";
+  }
+
+  // ------------------------------------------------------------------ path page
+  function renderPath(packId) {
+    var pack = packById(packId);
+    if (!pack) return renderHome();
+    session = null;
+    rerender = function () { renderPath(packId); };
+    var levels = meta[pack.id].levels, cur = currentLevel(pack), passed = passedLevels(pack);
+    var html = '<section class="pathhead"><button class="btn ghost small" id="backBtn">← ' + esc(t("back")) + "</button>" +
+      '<span class="eyebrow">' + esc(pack.side === "w" ? t("white") : t("black")) + "</span><h1>" + esc(loc(pack.name)) + "</h1>" +
+      '<p class="muted">' + esc(t("pathHelp")) + "</p></section><ol class=\"path\">";
+    levels.forEach(function (l) {
+      var st = levelStats(pack, l);
+      var state_ = passed[l.n] ? "done" : cur && cur.n === l.n ? "current" : "locked";
+      var pct = st.total ? Math.round(st.settled / st.total * 100) : 0;
+      html += '<li class="lv ' + state_ + '"><span class="node" aria-hidden="true">' + (state_ === "done" ? "✓" : state_ === "locked" ? "" : l.index) + "</span>" +
+        '<div class="lvbody"><div class="lvhead"><span class="mono muted">Level ' + l.index + "</span><span class=\"chip " + state_ + '">' +
+        esc(t(state_ === "done" ? "lvDone" : state_ === "current" ? "lvCurrent" : "lvLocked")) + "</span></div>" +
+        "<h3>" + esc(loc(l.name)) + "</h3>";
+      if (state_ === "locked") {
+        html += '<p class="muted small">' + esc(t("lvSeen", { n: st.total })) + " · " + esc(t("lvUnlock", { i: l.index - 1 })) + "</p>";
+      } else {
+        html += '<div class="bar" aria-hidden="true"><span class="learned" style="width:' + pct + '%"></span></div>' +
+          '<p class="muted small">' + esc(t("lvMoves", { s: st.settled, n: st.total })) + "</p>";
+        if (state_ === "current") {
+          var hint = st.ready ? t("lvReady") : st.seen < st.total ? t("lvLearnFirst", { n: st.total - st.seen }) : t("lvSettle", { n: st.total - st.settled });
+          html += '<p class="lvhint' + (st.ready ? " ready" : "") + '">' + esc(hint) + "</p>" +
+            '<div class="row"><button class="btn small ' + (st.ready ? "primary" : "secondary") + '" data-lvexam="' + l.n + '"' + (st.ready ? "" : " disabled") + ">" + esc(t("lvExam")) + "</button>" +
+            '<button class="btn small ghost" data-lvtrain="1">' + esc(t("lvTrain")) + "</button></div>";
+        }
+      }
+      html += "</div></li>";
+    });
+    html += "</ol>";
+    view.innerHTML = html;
+    on("#backBtn", renderHome);
+    view.querySelectorAll("[data-lvexam]").forEach(function (b) {
+      b.onclick = function () { var n = Number(b.dataset.lvexam); startLevelExam(pack, levels.filter(function (l) { return l.n === n; })[0]); };
+    });
+    view.querySelectorAll("[data-lvtrain]").forEach(function (b) { b.onclick = function () { startSession(pack.id); }; });
+    window.scrollTo(0, 0);
+  }
 
   // ------------------------------------------------------------------ trainer layout
   function trainerLayout(extraControls) {
@@ -835,6 +972,10 @@
   }
 
   // ------------------------------------------------------------------ random test
+  function shuffle(a) {
+    for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var tmp = a[i]; a[i] = a[j]; a[j] = tmp; }
+    return a;
+  }
   function startExam() {
     var pool = [];
     packs.forEach(function (p) {
@@ -843,8 +984,18 @@
         if (c && c.box >= 2 && meta[p.id].parents[k]) pool.push({ pack: p, key: k });
       });
     });
-    for (var i = pool.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var tmp = pool[i]; pool[i] = pool[j]; pool[j] = tmp; }
-    session = { kind: "exam", items: pool.slice(0, 10), index: 0, right: 0, wrong: 0, fresh: 0, awaiting: null, busy: false };
+    runExam(shuffle(pool).slice(0, 10), null);
+  }
+  /** Level test: up to 10 positions of the level, 80 % to pass. */
+  function startLevelExam(pack, lv) {
+    if (!pack || !lv) return renderHome();
+    var keys = shuffle(levelStats(pack, lv).keys.slice());
+    var items = keys.slice(0, 10).map(function (k) { return { pack: pack, key: k }; });
+    var need = Math.ceil(items.length * 0.8);
+    runExam(items, { pack: pack, level: lv, need: need });
+  }
+  function runExam(items, levelExam) {
+    session = { kind: "exam", items: items, levelExam: levelExam, index: 0, right: 0, wrong: 0, fresh: 0, awaiting: null, busy: false };
     trainerLayout('<button class="btn small ghost" id="showBtn">' + esc(t("show")) + '</button><button class="btn small secondary" id="nextBtn" hidden>' + esc(t("next")) + "</button>");
     rerender = function () { trainerLayoutRefresh(); };
     mountBoard(document.getElementById("board"), "w", onUserMove);
@@ -865,12 +1016,14 @@
     var item = s.items[s.index];
     var pack = item.pack, key = item.key;
     s.pack = pack; s.key = key;
-    var parent = meta[pack.id].parents[key][0];
+    var parent = (meta[pack.id].parents[key] || [])[0];
     s.awaiting = { key: key, rep: pack.pos[key].m[0], shown: false, mistakes: 0 };
     board.setOrientation(pack.side);
-    board.setPosition(R.keyToFen(key), { lastMove: [parent.edge.u.slice(0, 2), parent.edge.u.slice(2, 4)], movable: pack.side });
-    document.getElementById("opening").textContent = pack.pos[key].o || loc(pack.name);
-    document.getElementById("moves").innerHTML = "<b>" + (s.index + 1) + " / " + s.items.length + "</b> · " + esc(loc(pack.name)) + " · " + esc(t("oppPlays", { c: parent.edge.s ? (R.sideOf(parent.from) === "w" ? t("white") : t("black")) : "", m: S(parent.edge.s) }));
+    board.setPosition(R.keyToFen(key), { lastMove: parent ? [parent.edge.u.slice(0, 2), parent.edge.u.slice(2, 4)] : null, movable: pack.side });
+    document.getElementById("opening").textContent = s.levelExam ? t("lvExamTitle", { name: loc(s.levelExam.level.name) }) : (pack.pos[key].o || loc(pack.name));
+    document.getElementById("moves").innerHTML = "<b>" + (s.index + 1) + " / " + s.items.length + "</b> · " + esc(loc(pack.name)) +
+      (parent ? " · " + esc(t("oppPlays", { c: R.sideOf(parent.from) === "w" ? t("white") : t("black"), m: S(parent.edge.s) })) : "") +
+      (s.levelExam ? " · " + esc(t("lvNeed", { k: s.levelExam.need, n: s.items.length })) : "");
     document.getElementById("progress").textContent = (s.index + 1) + "/" + s.items.length;
     setPrompt("exam", t("examPrompt"));
     setFeedback([]);
@@ -920,11 +1073,34 @@
     var s = session;
     session = null;
     rerender = renderHome;
+    if (s.levelExam) return finishLevelExam(s);
     view.innerHTML = '<section class="summary"><span class="eyebrow">Book Club</span><h2>' + esc(t("examDone")) + "</h2>" +
       '<div class="counts"><div class="count streak"><b>' + s.right + "</b><span>" + esc(t("right")) + '</span></div><div class="count due"><b>' + s.wrong + "</b><span>" + esc(t("wrongs")) + "</span></div></div>" +
       '<div class="row" style="display:flex;gap:10px"><button class="btn secondary" id="againBtn">' + esc(t("again")) + '</button><button class="btn primary" id="homeBtn">' + esc(t("toHome")) + "</button></div></section>";
     on("#homeBtn", renderHome);
     on("#againBtn", startExam);
+  }
+
+  function finishLevelExam(s) {
+    var le = s.levelExam, pack = le.pack;
+    var passedIt = s.right >= le.need;
+    var html = '<section class="summary"><span class="eyebrow">' + esc(loc(pack.name)) + " · Level " + le.level.index + "</span>";
+    if (passedIt) {
+      passLevel(pack, le.level);
+      var next = currentLevel(pack);
+      html += '<div class="crown" aria-hidden="true">♛\uFE0E</div><h2>' + esc(t("lvPass", { i: le.level.index })) + "</h2>" +
+        '<p class="muted">' + esc(next ? t("lvNext", { name: "Level " + next.index + " · " + loc(next.name) }) : t("lvFinal")) + "</p>";
+    } else {
+      html += "<h2>" + esc(loc(le.level.name)) + "</h2>" +
+        '<p class="muted">' + esc(t("lvFail", { r: s.right, n: s.items.length, k: le.need })) + "</p>";
+    }
+    html += '<div class="counts"><div class="count streak"><b>' + s.right + "</b><span>" + esc(t("right")) + '</span></div><div class="count due"><b>' + s.wrong + "</b><span>" + esc(t("wrongs")) + "</span></div></div>" +
+      '<div class="row" style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">' +
+      (passedIt ? "" : '<button class="btn secondary" id="againBtn">' + esc(t("lvExamAgain")) + "</button>") +
+      '<button class="btn primary" id="pathBtn">' + esc(t("lvToPath")) + "</button></div></section>";
+    view.innerHTML = html;
+    on("#pathBtn", function () { renderPath(pack.id); });
+    on("#againBtn", function () { startLevelExam(pack, le.level); });
   }
 
   // ------------------------------------------------------------------ repertoire browser
@@ -1021,7 +1197,7 @@
     dlg.querySelector("#importFile").onchange = function () { importProgress(this.files[0]); };
     dlg.querySelector("#resetBtn").onclick = function () {
       if (!confirm(t("resetConfirm"))) return;
-      state.cards = {}; state.days = {}; state.resetAt = Date.now(); save(); dlg.close(); renderHome();
+      state.cards = {}; state.days = {}; state.path = {}; state.resetAt = Date.now(); save(); dlg.close(); renderHome();
     };
     dlg.querySelector("#pgnFile").onchange = function () {
       var f = this.files[0];
@@ -1120,5 +1296,5 @@
   }
 
   // For the self-test page.
-  window.BookClub = { session: function () { return session; }, state: function () { return state; }, sync: function () { return sync; }, grade: grade, today: today, addDays: addDays, packs: function () { return packs; }, meta: function () { return meta; }, pickNew: pickNew };
+  window.BookClub = { session: function () { return session; }, state: function () { return state; }, sync: function () { return sync; }, currentLevel: currentLevel, levelStats: levelStats, grade: grade, today: today, addDays: addDays, packs: function () { return packs; }, meta: function () { return meta; }, pickNew: pickNew };
 })();

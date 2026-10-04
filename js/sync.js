@@ -59,6 +59,23 @@
     });
     out.custom = Object.keys(packs).map(function (id) { return packs[id]; });
 
+    // Passed level tests: union, earliest time; a reset clears them like the cards.
+    var path = {};
+    [a.path || {}, b.path || {}].forEach(function (src) {
+      Object.keys(src).forEach(function (packId) {
+        var passed = (src[packId] && src[packId].passed) || {};
+        Object.keys(passed).forEach(function (n) {
+          var ts = num(passed[n]);
+          if (resetAt && ts <= resetAt) return;
+          if (removed[packId] && ts <= removed[packId]) return;
+          path[packId] = path[packId] || { passed: {} };
+          var cur = path[packId].passed[n];
+          path[packId].passed[n] = cur ? Math.min(cur, ts) : ts;
+        });
+      });
+    });
+    out.path = path;
+
     var cards = {};
     var ca = a.cards || {}, cb = b.cards || {};
     Object.keys(ca).concat(Object.keys(cb)).forEach(function (id) {

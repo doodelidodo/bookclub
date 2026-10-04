@@ -28,8 +28,18 @@ the same session. A transposition is the same position, so it's the same card.
 | **Random positions** | A position from the middle of your repertoire, no run-up. The real test: do you know it without the moves leading there? | Once positions are settled |
 | **Repertoire browser** | Walk the tree, see your move, the replies and how often each one is played. | To look things up |
 
-New moves are introduced most-common-first, and only once you know the move
-before them, so day one is 1.e4 and the main line, not a sideline on move 12.
+Every opening is a **path of levels**: the main idea first, then the
+opponent's other tries one family at a time (Vienna: other replies to 3.f4,
+without …Nf6, the Sicilian, …). New moves only come from your current level.
+Once every move of the level has held for a day, its test opens: 8 of 10 right
+unlocks the next level. Reviews always cover everything you already know.
+Inside a level, new moves come most-common-first and only once you know the
+move before them.
+
+Levels are set in the PGN with a comment on the move that starts them,
+`{level 2: de: Wenn Schwarz nimmt || en: When Black takes}`; later moves of the
+same level just say `{level 2}`. Imported PGNs without tags get levels
+automatically: each reply at the first branching point becomes one.
 
 ## Ships with
 
@@ -88,7 +98,10 @@ LICHESS_TOKEN=lip_xxx node tools/build-pack.js repertoire/*.pgn --explorer
 - Opponent replies with at least 5 % of the games are added, each with its game count and results.
 - Where your PGN has no move for your side, the script picks the best-scoring popular move and marks it **auto** (shown in the app), so you can review it.
 - Repertoire moves that score badly at that rating, or are hardly ever played, are reported.
+- Only positions that come up in at least 1 of 100 games with the opening are added (`--min-reach`).
 - Defaults: ratings 1200–1600, blitz + rapid, up to move 9. See `node tools/build-pack.js --help`.
+- Changed only comments, levels or a move in the PGN? `--update` rebuilds the packs and keeps the
+  Lichess data already in `packs/`, no network needed.
 
 A personal Lichess token (no scopes needed) is created at
 <https://lichess.org/account/oauth/token>. Answers are cached in `tools/.cache`,

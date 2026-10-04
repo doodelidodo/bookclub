@@ -4,50 +4,52 @@
 [NameEn "Vienna Gambit"]
 [BlurbDe "Weiss: 1.e4 e5 2.Sc3 und f4, wo immer es geht. Auch gegen Sizilianisch, Pirc und Co."]
 [BlurbEn "White: 1.e4 e5 2.Nc3 and f4 wherever it fits. Also against the Sicilian, the Pirc and friends."]
+[Level1De "Die Grundidee"]
+[Level1En "The main idea"]
 
 1. e4 e5
-  (1... c5 2. Nc3 {de: Gleiche Idee wie im Wiener: erst Sc3, dann f4 (Grand-Prix-Angriff). || en: Same idea as in the Vienna: Nc3 first, then f4 (Grand Prix Attack).}
+  (1... c5 {level 5: de: Gegen Sizilianisch || en: Against the Sicilian} 2. Nc3 {de: Gleiche Idee wie im Wiener: erst Sc3, dann f4 (Grand-Prix-Angriff). || en: Same idea as in the Vienna: Nc3 first, then f4 (Grand Prix Attack).}
     2... Nc6 (2... d6 3. f4 Nf6 4. Nf3) (2... e6 3. f4 d5 4. Nf3)
     3. f4 g6 (3... e6 4. Nf3 d5 5. Bb5) 4. Nf3 Bg7 5. Bc4)
-  (1... e6 2. d4 d5 3. exd5 {de: Abtauschfranzose: symmetrisch, ruhig, kaum Theorie. || en: Exchange French: symmetrical, calm, almost no theory.}
+  (1... e6 {level 6: de: Gegen Französisch und Caro-Kann || en: Against the French and the Caro-Kann} 2. d4 d5 3. exd5 {de: Abtauschfranzose: symmetrisch, ruhig, kaum Theorie. || en: Exchange French: symmetrical, calm, almost no theory.}
     3... exd5 4. Bd3 Nc6 (4... Nf6 5. Nf3 Bd6 6. O-O) 5. c3 Bd6 6. Nf3)
-  (1... c6 2. Nc3 d5 3. Nf3 {de: Zwei-Springer-Variante: passt zu Sc3 und ist für Caro-Spieler ungewohnt. || en: Two Knights: fits Nc3 and takes Caro-Kann players out of their comfort zone.}
+  (1... c6 {level 6} 2. Nc3 d5 3. Nf3 {de: Zwei-Springer-Variante: passt zu Sc3 und ist für Caro-Spieler ungewohnt. || en: Two Knights: fits Nc3 and takes Caro-Kann players out of their comfort zone.}
     3... Bg4 (3... dxe4 4. Nxe4 Bf5 (4... Nf6 5. Nxf6+ exf6 6. Bc4) 5. Ng3 Bg6 6. h4 h6 7. Ne5 Bh7 8. Qh5 {de: Droht Dxf7 matt. Schwarz muss genau verteidigen. || en: Threatens Qxf7 mate. Black has to defend precisely.})
     4. h3 Bxf3 5. Qxf3 e6 6. d3 Nf6 7. Bd2)
-  (1... d5 2. exd5 Qxd5 (2... Nf6 3. d4 Nxd5 4. Nf3 Bg4 5. Be2)
+  (1... d5 {level 7: de: Gegen Skandinavisch, Pirc und Co. || en: Against the Scandinavian, the Pirc and friends} 2. exd5 Qxd5 (2... Nf6 3. d4 Nxd5 4. Nf3 Bg4 5. Be2)
     3. Nc3 {de: Die Dame muss wieder ziehen, Weiss gewinnt Zeit. || en: The queen has to move again and White gains time.}
     3... Qa5 (3... Qd6 4. d4 Nf6 5. Nf3) (3... Qd8 4. d4 Nf6 5. Nf3)
     4. d4 Nf6 5. Nf3 c6 (5... Bf5 6. Bc4 e6 7. Bd2) 6. Bc4 Bf5 7. Bd2)
-  (1... d6 2. d4 Nf6 3. Nc3 g6 4. f4 {de: Österreichischer Angriff: wieder f4, wie im Wiener Gambit. || en: Austrian Attack: f4 again, just like in the Vienna Gambit.}
+  (1... d6 {level 7} 2. d4 Nf6 3. Nc3 g6 4. f4 {de: Österreichischer Angriff: wieder f4, wie im Wiener Gambit. || en: Austrian Attack: f4 again, just like in the Vienna Gambit.}
     4... Bg7 5. Nf3 O-O 6. Bd3)
-  (1... g6 2. d4 Bg7 3. Nc3 d6 4. f4 Nf6 5. Nf3 O-O 6. Bd3)
-  (1... Nc6 2. Nc3 e5)
+  (1... g6 {level 7} 2. d4 Bg7 3. Nc3 d6 4. f4 Nf6 5. Nf3 O-O 6. Bd3)
+  (1... Nc6 {level 7} 2. Nc3 e5)
 2. Nc3 {de: Die Wiener Partie. Der Springer deckt e4 und bereitet f4 vor. || en: The Vienna Game. The knight guards e4 and prepares f4.}
 2... Nf6
-  (2... Nc6 3. Bc4 {de: Gegen 2…Sc6 zuerst Lc4. f4 kommt später, wenn der König sicher ist. || en: Against 2…Nc6 play Bc4 first. f4 comes later, once the king is safe.}
+  (2... Nc6 {level 3: de: Ohne …Sf6 || en: Without …Nf6} 3. Bc4 {de: Gegen 2…Sc6 zuerst Lc4. f4 kommt später, wenn der König sicher ist. || en: Against 2…Nc6 play Bc4 first. f4 comes later, once the king is safe.}
     3... Nf6
       (3... Bc5 4. Qg4 {de: Greift g7 an. Wer hier nicht aufpasst, verliert sofort Material. || en: Hits g7. Black has to be careful or loses material right away.}
         4... Qf6 (4... g6 5. Qf3 Nf6 6. Nge2) (4... Nf6 5. Qxg7 Rg8 6. Qxf7# {de: Matt! Dame und Läufer c4 treffen beide f7. || en: Mate! Queen and the c4 bishop both hit f7.})
         5. Nd5 Qxf2+ 6. Kd1 Kf8 7. Nh3 Qd4 8. d3)
     4. d3 Bc5 (4... Bb4 5. Nf3 d6 6. O-O) (4... Na5 5. Nge2 Nxc4 6. dxc4) (4... h6 5. f4 d6 6. Nf3)
     5. f4 {de: Und doch f4. || en: And f4 after all.} 5... d6 6. Nf3)
-  (2... Bc5 3. Nf3 d6
+  (2... Bc5 {level 3} 3. Nf3 d6
       (3... Nc6 4. Nxe5 {de: Der Gabeltrick: nach 4…Sxe5 5.d4 bekommt Weiss die Figur zurück und hat das Zentrum. || en: The fork trick: after 4…Nxe5 5.d4 White wins the piece back with a big centre.}
         4... Nxe5 (4... Bxf2+ 5. Kxf2 Nxe5 6. d4) 5. d4 Bd6 6. dxe5 Bxe5 7. Bd3)
     4. d4 exd4 5. Nxd4 Nf6 6. Be2 O-O 7. O-O)
-  (2... d6 3. f4 Nf6 4. Nf3 Nc6 5. Bc4)
+  (2... d6 {level 3} 3. f4 Nf6 4. Nf3 Nc6 5. Bc4)
 3. f4 {de: Das Wiener Gambit. Weiss will die f-Linie öffnen und angreifen. || en: The Vienna Gambit. White wants to open the f-file and attack.}
 3... d5 {de: Die beste Antwort: Schwarz schlägt im Zentrum zurück. || en: The principled reply: Black strikes back in the centre.}
-  (3... exf4 4. e5 {de: Der Springer muss weg, Weiss gewinnt Raum. || en: The knight has to go and White gains space.}
+  (3... exf4 {level 2: de: Andere Antworten auf 3.f4 || en: Other replies to 3.f4} 4. e5 {de: Der Springer muss weg, Weiss gewinnt Raum. || en: The knight has to go and White gains space.}
     4... Ng8 (4... Qe7 5. Qe2) (4... Nh5 5. Qxh5 {de: Der Springer hängt: die Diagonale d1–h5 ist offen. || en: The knight hangs: the d1–h5 diagonal is open.}) (4... Ng4 5. Qxg4 {de: Auch hier hängt der Springer. || en: The knight hangs here too.})
     5. Nf3 d6 6. d4 dxe5 7. dxe5 Qxd1+ 8. Nxd1 Nc6 9. Bxf4)
-  (3... d6 4. Nf3 Nc6 5. Bc4)
-  (3... Nc6 4. fxe5 Nxe5 5. d4 Ng6 6. e5 Ng8 7. Nf3 d6 8. Bc4)
-  (3... Bc5 4. fxe5 {de: Einfach nehmen: der Springer f6 muss weg. || en: Just take: the f6 knight has to move.})
+  (3... d6 {level 2} 4. Nf3 Nc6 5. Bc4)
+  (3... Nc6 {level 2} 4. fxe5 Nxe5 5. d4 Ng6 6. e5 Ng8 7. Nf3 d6 8. Bc4)
+  (3... Bc5 {level 2} 4. fxe5 {de: Einfach nehmen: der Springer f6 muss weg. || en: Just take: the f6 knight has to move.})
 4. fxe5 Nxe4 5. Nf3 {de: Entwickeln und e5 halten. || en: Develop and hold on to e5.}
-5... Be7
-  (5... Nc6 6. Bb5)
-  (5... Bg4 6. Qe2 Nxc3 7. dxc3 c6 8. Bf4)
-  (5... Bc5 6. d4 Bb4 7. Bd2)
-  (5... Nxc3 6. bxc3 Be7 7. d4 O-O 8. Bd3)
+5... Be7 {level 8: de: Tiefer in der Hauptvariante || en: Deeper in the main line}
+  (5... Nc6 {level 4: de: Schwarz weicht im 5. Zug ab || en: Black deviates on move 5} 6. Bb5)
+  (5... Bg4 {level 4} 6. Qe2 Nxc3 7. dxc3 c6 8. Bf4)
+  (5... Bc5 {level 4} 6. d4 Bb4 7. Bd2)
+  (5... Nxc3 {level 4} 6. bxc3 Be7 7. d4 O-O 8. Bd3)
 6. d4 O-O 7. Bd3 f5 8. exf6 Bxf6 9. O-O {de: Gut entwickelt, der König ist sicher. Jetzt beginnt das Mittelspiel. || en: Well developed and castled. The middlegame starts here.} *

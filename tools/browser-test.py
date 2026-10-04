@@ -221,6 +221,74 @@ def server_test(browser, rng, errors):
         proc.terminate()
 
 
+def answer_exam(pg, wrong_first=0):
+    """Plays a level test: the first `wrong_first` answers deliberately wrong."""
+    i = 0
+    while True:
+        s = awaiting(pg)
+        if s is None or s["kind"] != "exam" or not s["a"]:
+            return
+        u = s["a"]["u"]
+        if i < wrong_first:
+            mv = other_move(pg)
+            tap(pg, mv[:2]); tap(pg, mv[2:4])
+        tap(pg, u[:2]); tap(pg, u[2:4])
+        pg.click("#nextBtn")
+        i += 1
+
+
+def path_test(browser, rng, errors):
+    ctx = browser.new_context(viewport={"width": 1200, "height": 900}, locale="de-CH")
+    pg = ctx.new_page()
+    pg.on("pageerror", lambda e: errors.append(str(e)))
+    pg.goto(URL)
+    pg.wait_for_selector(".pack")
+    check("card shows the level", "Level 1 von" in pg.inner_text(".pack"))
+    pg.click("[data-path=vienna]")
+    pg.wait_for_selector(".path")
+    check("path: level 1 current, rest locked", pg.locator(".lv.current").count() == 1 and pg.locator(".lv.locked").count() >= 5)
+    check("path: test locked at the start", pg.locator("[data-lvexam]").is_disabled())
+    # Strict: even a big budget only offers level-1 moves.
+    lv = pg.evaluate("""() => { const B = window.BookClub; const p = B.packs().find(x => x.id === 'vienna');
+        const ids = B.pickNew(200).filter(id => id.startsWith('vienna|'));
+        const L = B.meta().vienna; return ids.map(id => L.levelOf[id.split('|')[1]]); }""")
+    check("strict: new moves only from level 1", lv and all(n == 1 for n in lv), lv)
+    pg.click("[data-lvtrain]")
+    play_session(pg, 0.0, rng)
+    pg.goto(URL)
+    pg.wait_for_selector(".pack")
+    time_travel(pg)
+    pg.goto(URL)
+    pg.wait_for_selector(".pack")
+    if pg.locator("#startBtn").count():
+        pg.click("#startBtn")
+        play_session(pg, 0.0, rng)
+        pg.goto(URL)
+        pg.wait_for_selector(".pack")
+    check("ready banner on the start page", pg.locator("[data-levelexam=vienna]").count() == 1)
+    shot(pg, "path-banner", True)
+    pg.click("[data-levelexam=vienna]")
+    pg.wait_for_selector(".prompt .chip.exam")
+    shot(pg, "path-exam")
+    answer_exam(pg, wrong_first=3)
+    check("failed test does not unlock", pg.evaluate("() => { const B = window.BookClub; const p = B.packs().find(x => x.id === 'vienna'); return B.currentLevel(p).index; }") == 1)
+    check("fail message", "braucht es" in pg.inner_text(".summary"))
+    pg.click("#againBtn")
+    pg.wait_for_selector(".prompt .chip.exam")
+    answer_exam(pg)
+    check("passed test unlocks level 2", pg.evaluate("() => { const B = window.BookClub; const p = B.packs().find(x => x.id === 'vienna'); return B.currentLevel(p).index; }") == 2)
+    check("pass message", "Bestanden" in pg.inner_text(".summary"))
+    shot(pg, "path-passed")
+    pg.click("#pathBtn")
+    pg.wait_for_selector(".path")
+    check("path: level 1 done, level 2 current", pg.locator(".lv.done").count() == 1 and pg.locator(".lv.current h3").inner_text().startswith("Andere"))
+    lv2 = pg.evaluate("""() => { const B = window.BookClub; const ids = B.pickNew(200).filter(id => id.startsWith('vienna|'));
+        const L = B.meta().vienna; return ids.map(id => L.levelOf[id.split('|')[1]]); }""")
+    check("level 2 moves now on offer", lv2 and set(lv2) <= {1, 2} and 2 in lv2, lv2)
+    shot(pg, "path-after", True)
+    ctx.close()
+
+
 def main():
     rng = random.Random(7)
     with sync_playwright() as p:
@@ -353,6 +421,9 @@ def main():
         pp.click("#backBtn")
         pp.click("[data-browse=slav]")
         check("phone: browser fits", no_overflow(pp))
+
+        print("8 path: levels and tests")
+        path_test(browser, rng, errors)
 
         print("7 server: two devices, one progress")
         server_test(browser, rng, errors)

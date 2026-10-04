@@ -4,23 +4,25 @@
 [NameEn "Caro-Kann"]
 [BlurbDe "Schwarz gegen 1.e4: …c6 und …d5, der Läufer kommt vor …e6 heraus. Solide und klar."]
 [BlurbEn "Black against 1.e4: …c6 and …d5, the bishop gets out before …e6. Solid and clear."]
+[Level1De "Die Grundidee"]
+[Level1En "The main idea"]
 
 1. e4 c6 {de: Bereitet …d5 vor, ohne den Läufer c8 einzusperren. || en: Prepares …d5 without locking in the c8 bishop.}
 2. d4
-  (2. Nc3 d5 3. Nf3
+  (2. Nc3 {level 5: de: Ohne 2.d4 || en: Without 2.d4} d5 3. Nf3
       (3. d4 dxe4 4. Nxe4)
       (3. Qf3 dxe4 4. Nxe4 Nf6)
       (3. e5 Bf5 4. d4 e6)
     3... Bg4 4. h3 Bxf3 5. Qxf3 e6 {de: Schwarz gibt den Läufer, steht aber felsenfest. || en: Black gives up the bishop but stands rock solid.}
     6. d4 (6. d3 Nf6 7. Bd2 Nbd7) (6. Be2 Nf6) 6... Nf6)
-  (2. Nf3 d5 3. e5 Bf5 4. d4 e6)
-  (2. d3 d5 3. Nd2 e5 {de: Gegen den Königsindischen Aufbau nimmt Schwarz einfach das Zentrum. || en: Against the King's Indian setup Black simply takes the centre.}
+  (2. Nf3 {level 5} d5 3. e5 Bf5 4. d4 e6)
+  (2. d3 {level 5} d5 3. Nd2 e5 {de: Gegen den Königsindischen Aufbau nimmt Schwarz einfach das Zentrum. || en: Against the King's Indian setup Black simply takes the centre.}
     4. Ngf3 Bd6 5. g3 Nf6 6. Bg2 O-O 7. O-O Re8)
-  (2. c4 d5 3. exd5 cxd5 4. cxd5 (4. d4 Nf6) 4... Nf6 5. Nc3 Nxd5 6. Nf3 Nc6)
-  (2. Bc4 d5 3. exd5 cxd5 4. Bb5+ (4. Bb3 Nf6 5. d4 Nc6) 4... Bd7 5. Bxd7+ Qxd7)
+  (2. c4 {level 5} d5 3. exd5 cxd5 4. cxd5 (4. d4 Nf6) 4... Nf6 5. Nc3 Nxd5 6. Nf3 Nc6)
+  (2. Bc4 {level 5} d5 3. exd5 cxd5 4. Bb5+ (4. Bb3 Nf6 5. d4 Nc6) 4... Bd7 5. Bxd7+ Qxd7)
 2... d5
 3. e5 {de: Vorstoss-Variante. Der Plan: …Lf5, …e6, …Sd7, …Se7 und später …c5. || en: Advance Variation. The plan: …Bf5, …e6, …Nd7, …Ne7 and later …c5.}
-  (3. Nc3 dxe4 4. Nxe4 Bf5 {de: Klassisch: der Läufer kommt mit Tempo heraus. || en: Classical: the bishop comes out with tempo.}
+  (3. Nc3 {level 2: de: Klassisch: 3.Sc3 und 3.Sd2 || en: Classical: 3.Nc3 and 3.Nd2} dxe4 4. Nxe4 Bf5 {de: Klassisch: der Läufer kommt mit Tempo heraus. || en: Classical: the bishop comes out with tempo.}
     5. Ng3
       (5. Bd3 Bxe4 6. Bxe4 Nf6 7. Bd3 (7. Bf3 e6) 7... Qxd4 8. Nf3 Qd8)
       (5. Nc5 b6 6. Nb3 e6 7. Nf3 Nd7)
@@ -30,19 +32,19 @@
       (6. Bc4 e6 7. N1e2 Nf6 8. Nf4 Bd6)
     6... h6 {de: Der Läufer behält seinen Rückzug nach h7. || en: The bishop keeps its retreat to h7.}
     7. Nf3 Nd7 8. h5 Bh7 9. Bd3 Bxd3 10. Qxd3 e6 {de: Klassische Caro-Stellung ohne Schwächen. …Sgf6 und …Le7 folgen. || en: A classic Caro position with no weaknesses. …Ngf6 and …Be7 follow.})
-  (3. Nd2 dxe4 4. Nxe4)
-  (3. exd5 cxd5 {de: Abtausch: symmetrisch, Schwarz entwickelt einfach. || en: Exchange: symmetrical, Black simply develops.}
+  (3. Nd2 {level 2} dxe4 4. Nxe4)
+  (3. exd5 {level 3: de: Abtausch und Panov || en: Exchange and Panov} cxd5 {de: Abtausch: symmetrisch, Schwarz entwickelt einfach. || en: Exchange: symmetrical, Black simply develops.}
     4. Bd3
       (4. c4 Nf6 5. Nc3 e6 6. Nf3 Be7 7. cxd5 Nxd5 8. Bd3 Nc6)
       (4. Nf3 Nf6 5. Bd3 (5. Nc3 Bg4 6. h3 Bxf3 {de: Gleich tauschen: Lh5 lässt g4 und Se5 zu. || en: Take at once: Bh5 allows g4 and Ne5.} 7. Qxf3 e6) 5... Bg4)
     4... Nc6 5. c3 Nf6 6. Bf4 Bg4 7. Qb3 Qd7)
-  (3. f3 e6 4. Nc3 Bb4 5. Bf4 Ne7)
+  (3. f3 {level 4: de: Andere Züge gegen den Vorstoss-Plan || en: Other tries against the Advance plan} e6 4. Nc3 Bb4 5. Bf4 Ne7)
 3... Bf5 4. Nf3
-  (4. Nc3 e6 5. g4 Bg6 6. Nge2 c5 7. h4 h5 8. Nf4 Bh7)
-  (4. h4 h5 5. c4 e6 6. Nc3 Ne7)
-  (4. Bd3 Bxd3 5. Qxd3 e6 6. Nf3 c5 7. O-O Nc6)
-  (4. g4 Bd7 5. h4 c5)
-  (4. Nd2 e6 5. Nb3 Nd7 6. Nf3 Ne7)
-  (4. c3 e6 5. Be2 Nd7 6. Nf3 Ne7)
-  (4. Be2 e6 5. Nf3 Nd7 6. O-O Ne7)
+  (4. Nc3 {level 4} e6 5. g4 Bg6 6. Nge2 c5 7. h4 h5 8. Nf4 Bh7)
+  (4. h4 {level 4} h5 5. c4 e6 6. Nc3 Ne7)
+  (4. Bd3 {level 4} Bxd3 5. Qxd3 e6 6. Nf3 c5 7. O-O Nc6)
+  (4. g4 {level 4} Bd7 5. h4 c5)
+  (4. Nd2 {level 4} e6 5. Nb3 Nd7 6. Nf3 Ne7)
+  (4. c3 {level 4} e6 5. Be2 Nd7 6. Nf3 Ne7)
+  (4. Be2 {level 4} e6 5. Nf3 Nd7 6. O-O Ne7)
 4... e6 5. Be2 Nd7 6. O-O Ne7 {de: Der Springer geht nach g6 oder f5, danach …c5 gegen das Zentrum. || en: The knight heads for g6 or f5, then …c5 hits the centre.} *

@@ -1,6 +1,6 @@
 /* Book Club – offline cache. Network first for the app files, so updates arrive
    on the next visit; the cache only answers when there is no connection. */
-var CACHE = "bookclub-v2";
+var CACHE = "bookclub-v3";
 var FILES = [
   "./", "index.html", "css/style.css", "vendor/chess.js", "assets/pieces.js", "assets/icon.svg",
   "js/repertoire.js", "js/sync.js", "js/board.js", "js/app.js",
