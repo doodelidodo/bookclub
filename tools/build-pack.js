@@ -85,7 +85,7 @@ async function explorer(fen, opts) {
   if (cacheDir !== "none" && fs.existsSync(file)) return JSON.parse(fs.readFileSync(file, "utf8"));
 
   for (let attempt = 1; attempt <= 5; attempt++) {
-    const wait = lastRequest + (opts.pauseMs === undefined ? 1100 : opts.pauseMs) - Date.now();   // about one request per second
+    const wait = lastRequest + (opts.pauseMs === undefined ? 2500 : opts.pauseMs) - Date.now();   // slow enough for the Lichess rate limit
     if (wait > 0) await sleep(wait);
     lastRequest = Date.now();
     const headers = { "User-Agent": "BookClub-opening-trainer (github.com/doodelidodo)" };
@@ -127,6 +127,22 @@ const scoreFor = (x, side) => {
 };
 const pct = (x) => Math.round(x * 100) + "%";
 
+/**
+ * Lichess writes castling as "king takes rook" (e1h1, e8a8). chess.js and the
+ * packs use the usual king move (e1g1, e8c8). Re-derive every move from its SAN
+ * so both spellings meet; moves chess.js can't play are dropped.
+ */
+function normalizeMoves(fen, moves) {
+  const out = [];
+  (moves || []).forEach((m) => {
+    let mv = null;
+    try { mv = new Chess(fen).move(m.san); } catch (e) { mv = null; }
+    if (!mv) return;
+    out.push(Object.assign({}, m, { uci: R.uciOf(mv), san: mv.san }));
+  });
+  return out;
+}
+
 async function extendWithExplorer(pack, opts, warnings) {
   const depth = {};
   depth[pack.root] = 0;
@@ -147,12 +163,13 @@ async function extendWithExplorer(pack, opts, warnings) {
     const data = await explorer(fen, opts);
     requests++;
     if (requests % 25 === 0) console.log("  " + requests + " positions asked, " + queue.length + " waiting");
+    const moves = normalizeMoves(fen, data.moves);
     const games = total(data);
     pos.g = games;
     if (data.opening && data.opening.name) pos.o = (data.opening.eco ? data.opening.eco + " " : "") + data.opening.name;
 
     const stats = {};
-    (data.moves || []).forEach((m) => { stats[m.uci] = m; });
+    moves.forEach((m) => { stats[m.uci] = m; });
     const extend = ply < opts.maxPly && games >= opts.minNodeGames;
 
     // Stats onto the moves we already have.
@@ -165,7 +182,7 @@ async function extendWithExplorer(pack, opts, warnings) {
     if (mine) {
       if (!pos.m.length && extend) {
         // Pick: popular enough, then best score for us.
-        const candidates = (data.moves || []).filter(
+        const candidates = moves.filter(
           (m) => total(m) >= opts.minGames && total(m) / games >= Math.max(opts.minShare, 0.08)
         );
         candidates.sort((a, b) => scoreFor(b, pack.side) - scoreFor(a, pack.side) || total(b) - total(a));
@@ -202,7 +219,7 @@ async function extendWithExplorer(pack, opts, warnings) {
       }
     } else {
       if (extend) {
-        (data.moves || []).forEach((m) => {
+        moves.forEach((m) => {
           const n = total(m);
           if (n < opts.minGames || n / games < opts.minShare) return;
           if (pos.m.some((e) => e.u === m.uci)) return;
@@ -274,4 +291,4 @@ async function main() {
 if (require.main === module) {
   main().catch((e) => { console.error("\n" + e.message); process.exit(1); });
 }
-module.exports = { extendWithExplorer, prune, explorer };
+module.exports = { extendWithExplorer, prune, explorer, normalizeMoves };

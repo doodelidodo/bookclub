@@ -141,6 +141,21 @@ const key = (moves) => { const c = new Chess(); moves.split(" ").filter(Boolean)
     check("every own position still has one move", R.myPositions(pack).every((k) => pack.pos[k].m.length === 1));
     check("pack valid after extension", R.validatePack(pack).length === 0, R.validatePack(pack));
 
+    // Lichess spells castling as king-takes-rook.
+    const castleFen = "r1bqk2r/pppp1ppp/2n2n2/2b1p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4";
+    const norm = B.normalizeMoves(castleFen, [{ uci: "e1h1", san: "O-O", white: 5, draws: 1, black: 4 }, { uci: "zzzz", san: "Qh9" }]);
+    check("castling e1h1 becomes e1g1", norm.length === 1 && norm[0].uci === "e1g1" && norm[0].white === 5, norm);
+    global.fetch = async (url) => {
+      const fen = new URL(url).searchParams.get("fen");
+      const canCastle = new Chess(fen).moves().includes("O-O") && fen.split(" ")[1] === "w";
+      const moves = canCastle ? [{ uci: "e1h1", san: "O-O", white: 300, draws: 50, black: 250 }] : [];
+      return { ok: true, status: 200, json: async () => ({ white: 300, draws: 50, black: 250, moves }) };
+    };
+    const castle = R.packFromPgn('[Side "white"]\n1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5 *', Chess);
+    await B.extendWithExplorer(castle.pack, { ...opts, maxPly: 8 }, castle.warnings);
+    const after = castle.pack.pos[key("e4 e5 Nf3 Nc6 Bc4 Bc5")];
+    check("explorer castling auto-pick works", after.m.length === 1 && after.m[0].s === "O-O" && after.m[0].u === "e1g1", after.m);
+
     global.fetch = async () => ({ ok: false, status: 401, json: async () => ({}) });
     let err = "";
     try { await B.explorer(R.START_FEN, { ...opts }); } catch (e) { err = e.message; }
