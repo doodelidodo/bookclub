@@ -96,7 +96,9 @@ const key = (moves) => { const c = new Chess(); moves.split(" ").filter(Boolean)
     check(f + " has comments in both languages", Object.values(pack.pos).some((p) => p.m.some((e) => e.c && e.c.de !== e.c.en)));
     const shipped = fs.readFileSync(path.join(ROOT, "packs", f + ".js"), "utf8");
     const json = JSON.parse(shipped.slice(shipped.indexOf(".push(") + 6, shipped.lastIndexOf(");")));
-    check(f + " shipped pack is up to date", R.myPositions(json).length === mine.length, [R.myPositions(json).length, mine.length]);
+    // The shipped pack may hold more (explorer), but every PGN move must be in it, unchanged.
+    const missing = mine.filter((k) => !json.pos[k] || !json.pos[k].m.length || json.pos[k].m[0].u !== pack.pos[k].m[0].u);
+    check(f + " shipped pack contains every PGN move", missing.length === 0, missing.slice(0, 3).map((k) => [k, pack.pos[k].m[0].s, json.pos[k] && json.pos[k].m[0] && json.pos[k].m[0].s]));
     console.log("  " + f + ": " + Object.keys(pack.pos).length + " positions, " + mine.length + " to learn");
   }
 
