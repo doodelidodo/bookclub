@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Book Club</title>
+<meta name="description" content="Opening trainer: drill your chess repertoire against the replies players at your level actually choose. Runs in the browser, free and open source.">
+<meta name="theme-color" content="#0f1621">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <button class="wordmark" id="homeLink" type="button" aria-label="Book Club">book club<span class="dot" aria-hidden="true"></span></button>
+      <div class="muted" id="tagline" style="font-size:.85rem"></div>
+    </div>
+    <div class="tools">
+      <span id="syncStatus" class="sync" hidden aria-live="polite"></span>
+      <div class="lang" role="group" aria-label="Sprache / Language">
+        <button type="button" data-lang="de" aria-pressed="true">DE</button>
+        <button type="button" data-lang="en" aria-pressed="false">EN</button>
+      </div>
+      <button class="iconbtn" id="settingsBtn" type="button" aria-label="Einstellungen">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>
+      </button>
+    </div>
+  </header>
+  <main id="view"></main>
+</div>
+<dialog id="settings"></dialog>
+
+<script src="vendor/chess.js"></script>
+<script src="assets/pieces.js"></script>
+<script src="js/repertoire.js"></script>
+<script src="js/sync.js"></script>
+<script src="packs/vienna.js"></script>
+<script src="packs/caro-kann.js"></script>
+<script src="packs/slav.js"></script>
+<script src="js/board.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

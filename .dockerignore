@@ -1,0 +1,7 @@
+.git
+.github
+data
+tools/.cache
+node_modules
+_demo.html
+*.zip
