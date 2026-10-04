@@ -26,6 +26,10 @@
  *   --min-reach 0.01           only extend positions that come up in at least 1 of 100 games
  *                              with this opening (product of the opponents' choices so far)
  *   --min-node-games 300       stop extending below positions with fewer games
+ *   --trap-share 0.02          traps: rarer opponent replies are still added when they are mistakes:
+ *   --trap-score 0.65          at least this share of the games and at least this score for you after
+ *   --no-traps                 them; your punishing move (and up to two follow-ups) is added too.
+ *                              They form the last level of the path, "Traps".
  *   --out packs                output folder
  *   --token <t>                Lichess API token (or env LICHESS_TOKEN)
  *
@@ -48,6 +52,7 @@ function parseArgs(argv) {
   const opts = {
     files: [], explorer: false, ratings: "1200,1400,1600", speeds: "blitz,rapid",
     maxPly: 18, minShare: 0.05, minGames: 40, minNodeGames: 300, minReach: 0.01,
+    traps: true, trapShare: 0.02, trapScore: 0.65, trapMoves: 3,
     out: path.join(ROOT, "packs"), token: process.env.LICHESS_TOKEN || ""
   };
   for (let i = 0; i < argv.length; i++) {
@@ -62,6 +67,9 @@ function parseArgs(argv) {
     else if (a === "--min-games") opts.minGames = Number(next());
     else if (a === "--min-node-games") opts.minNodeGames = Number(next());
     else if (a === "--min-reach") opts.minReach = Number(next());
+    else if (a === "--trap-share") opts.trapShare = Number(next());
+    else if (a === "--trap-score") opts.trapScore = Number(next());
+    else if (a === "--no-traps") opts.traps = false;
     else if (a === "--out") opts.out = path.resolve(next());
     else if (a === "--token") opts.token = next();
     else if (a === "-h" || a === "--help") { printHelp(); process.exit(0); }
@@ -162,6 +170,11 @@ async function extendWithExplorer(pack, opts, warnings) {
   const queue = [pack.root];
   const visited = new Set();
   let requests = 0;
+  // Trap lines: how many own moves are still to be added after the opponent's mistake.
+  const trapLeft = {};
+  const traps = opts.traps !== false;
+  const trapShare = opts.trapShare || 0.02, trapScore = opts.trapScore || 0.65, trapMoves = opts.trapMoves || 3;
+  let trapCount = 0;
 
   while (queue.length) {
     const key = queue.shift();
@@ -193,8 +206,9 @@ async function extendWithExplorer(pack, opts, warnings) {
       if (s) { e.w = s.white; e.d = s.draws; e.b = s.black; }
     });
 
+    const inTrap = (trapLeft[key] || 0) > 0;
     if (mine) {
-      if (!pos.m.length && extend) {
+      if (!pos.m.length && (extend || (inTrap && games >= opts.minGames))) {
         // Pick: popular enough, then best score for us.
         const candidates = moves.filter(
           (m) => total(m) >= opts.minGames && total(m) / games >= Math.max(opts.minShare, 0.08)
@@ -207,6 +221,7 @@ async function extendWithExplorer(pack, opts, warnings) {
           const t = R.fenKey(board.fen());
           if (!pack.pos[t]) pack.pos[t] = { m: [] };
           pos.m.push({ s: mv.san, u: pick.uci, t, n: total(pick), w: pick.white, d: pick.draws, b: pick.black, x: 1, a: 1 });
+          if (inTrap && trapLeft[key] > 1) trapLeft[t] = trapLeft[key] - 1;
           warnings.push({
             kind: "auto_pick", where: ply,
             text: "Picked " + mv.san + " (" + pct(scoreFor(pick, pack.side)) + " score, " + total(pick) + " games) in " + key
@@ -246,6 +261,37 @@ async function extendWithExplorer(pack, opts, warnings) {
           pos.m.push({ s: mv.san, u: m.uci, t, n, w: m.white, d: m.draws, b: m.black, x: 1 });
         });
       }
+      // Traps: rarer replies that are mistakes you can punish.
+      if (traps && ply > 0 && ply < opts.maxPly && games >= opts.minNodeGames && here >= minReach) {
+        moves.forEach((m) => {
+          const n = total(m);
+          if (n < opts.minGames || n / games < trapShare) return;
+          if (scoreFor(m, pack.side) < trapScore) return;
+          const have = pos.m.find((e) => e.u === m.uci);
+          if (have) return;            // already in the repertoire as a normal reply
+          const board = new Chess(fen);
+          const mv = board.move({ from: m.uci.slice(0, 2), to: m.uci.slice(2, 4), promotion: m.uci[4] });
+          const t = R.fenKey(board.fen());
+          if (!pack.pos[t]) pack.pos[t] = { m: [] };
+          pos.m.push({ s: mv.san, u: m.uci, t, n, w: m.white, d: m.draws, b: m.black, x: 1, tr: 1 });
+          trapLeft[t] = Math.max(trapLeft[t] || 0, trapMoves);
+          trapCount++;
+          warnings.push({ kind: "trap", where: ply, text: mv.san + "? (" + pct(n / games) + " of games, you score " + pct(scoreFor(m, pack.side)) + ") in " + key });
+        });
+      }
+      // Inside a trap line: follow the opponent's usual answer to your punishing move.
+      if (inTrap && !pos.m.length && games >= opts.minGames) {
+        const top = moves.filter((m) => total(m) >= opts.minGames && total(m) / games >= 0.3)
+          .sort((a, b) => total(b) - total(a))[0];
+        if (top) {
+          const board = new Chess(fen);
+          const mv = board.move({ from: top.uci.slice(0, 2), to: top.uci.slice(2, 4), promotion: top.uci[4] });
+          const t = R.fenKey(board.fen());
+          if (!pack.pos[t]) pack.pos[t] = { m: [] };
+          pos.m.push({ s: mv.san, u: top.uci, t, n: total(top), w: top.white, d: top.draws, b: top.black, x: 1 });
+          trapLeft[t] = trapLeft[key];
+        }
+      }
       // Most played reply first.
       pos.m.sort((a, b) => (b.n || 0) - (a.n || 0));
       pos.m.forEach((e) => {
@@ -258,6 +304,7 @@ async function extendWithExplorer(pack, opts, warnings) {
       });
     }
   }
+  if (traps) console.log("  " + trapCount + " traps found");
   return requests;
 }
 

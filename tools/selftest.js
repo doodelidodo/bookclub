@@ -231,6 +231,37 @@ const key = (moves) => { const c = new Chess(); moves.split(" ").filter(Boolean)
     check("reach limit keeps the tree small", nWide < 200, nWide);
     check("Black's pack does not add other first moves", wide.pack.pos[wide.pack.root].m.length === 1, wide.pack.pos[wide.pack.root].m.map((e) => e.s));
 
+    // Traps: a rare reply after which we score well is added with our punishing move.
+    global.fetch = async (url) => {
+      const fen = new URL(url).searchParams.get("fen");
+      const c = new Chess(fen);
+      const legal = c.moves({ verbose: true });
+      const pick = (san) => legal.find((m) => m.san === san);
+      let moves = [];
+      if (fen.startsWith("rnbqkbnr/pppp1ppp/8/4p3/4P3/2N5")) {           // after 1.e4 e5 2.Nc3, Black to move
+        moves = [
+          { m: pick("Nf6"), n: 900, w: .45, b: .45 },
+          { m: pick("Qh4"), n: 40, w: .80, b: .15 },                      // 4 %, White scores 80 %: a trap
+          { m: pick("a6"), n: 30, w: .40, b: .55 }                        // 3 %, but no mistake
+        ].filter((x) => x.m).map((x) => ({ uci: x.m.from + x.m.to, san: x.m.san, white: x.n * x.w, draws: x.n * (1 - x.w - x.b), black: x.n * x.b }));
+      } else if (c.turn() === "w") {
+        const best = legal.find((m) => m.san === "Nf3") || legal[0];
+        moves = [{ uci: best.from + best.to, san: best.san, white: 300, draws: 20, black: 80 }];
+      }
+      const n = moves.reduce((s2, m) => s2 + m.white + m.draws + m.black, 0) || 1000;
+      return { ok: true, status: 200, json: async () => ({ white: n / 2, draws: 0, black: n / 2, moves }) };
+    };
+    const tp = R.packFromPgn('[Side "white"]\n1. e4 e5 2. Nc3 *', Chess);
+    await B.extendWithExplorer(tp.pack, { ...opts, maxPly: 8, minReach: 0.01, minNodeGames: 50, minGames: 20 }, tp.warnings);
+    const afterNc3 = tp.pack.pos[key("e4 e5 Nc3")];
+    const trapEdge = afterNc3.m.find((e) => e.s === "Qh4");
+    check("trap reply added and marked", trapEdge && trapEdge.tr === 1, afterNc3.m.map((e) => e.s + (e.tr ? "!" : "")));
+    check("harmless rare reply not added", !afterNc3.m.some((e) => e.s === "a6"));
+    check("punishing move added after the trap", trapEdge && tp.pack.pos[trapEdge.t] && tp.pack.pos[trapEdge.t].m.length === 1, trapEdge && tp.pack.pos[trapEdge.t]);
+    const TLv = R.assignLevels(tp.pack);
+    const last = TLv.levels[TLv.levels.length - 1];
+    check("traps form the last level", last.n === 90 && /Fallen/.test(last.name.de) && TLv.levelOf[trapEdge.t] === 90, TLv.levels);
+
     // Lichess spells castling as king-takes-rook.
     const castleFen = "r1bqk2r/pppp1ppp/2n2n2/2b1p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4";
     const norm = B.normalizeMoves(castleFen, [{ uci: "e1h1", san: "O-O", white: 5, draws: 1, black: 4 }, { uci: "zzzz", san: "Qh9" }]);

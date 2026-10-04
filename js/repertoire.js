@@ -17,7 +17,8 @@
  *                c?: {de, en},                  // comment shown after the move
  *                x?: 1,                         // added from the explorer, not in the PGN
  *                a?: 1,                         // repertoire move picked by the script, please review
- *                lv?: n } ],                    // this move starts level n ({level n: …} in the PGN)
+ *                lv?: n,                        // this move starts level n ({level n: …} in the PGN)
+ *                tr?: 1 } ],                    // an opponent mistake to punish (added by the explorer)
  *         g?: games in this position, o?: opening name
  *       }
  *     },
@@ -320,6 +321,9 @@
    * position where the opponent has a choice, each reply becomes a level, most
    * played first.
    */
+  var TRAP_LEVEL = 90;
+  var TRAP_NAME = { de: "Fallen: Fehler bestrafen", en: "Traps: punish mistakes" };
+
   function assignLevels(pack) {
     var tagged = Object.keys(pack.pos).some(function (k) { return pack.pos[k].m.some(function (e) { return e.lv; }); });
     var edgeLevel = {};          // "fromKey|uci" -> level
@@ -333,7 +337,8 @@
         var maxSib = 0;
         m.forEach(function (e) { if (e.lv) maxSib = Math.max(maxSib, e.lv); });
         m.forEach(function (e) {
-          if (e.lv) edgeLevel[k + "|" + e.u] = e.lv;
+          if (e.tr) edgeLevel[k + "|" + e.u] = TRAP_LEVEL;
+          else if (e.lv) edgeLevel[k + "|" + e.u] = e.lv;
           else if (e.x && maxSib && sideOf(k) !== pack.side) edgeLevel[k + "|" + e.u] = maxSib;
         });
       });
@@ -357,6 +362,11 @@
         break;
       }
     }
+    // Traps always form the last level, tagged or not.
+    Object.keys(pack.pos).forEach(function (k) {
+      pack.pos[k].m.forEach(function (e) { if (e.tr) edgeLevel[k + "|" + e.u] = TRAP_LEVEL; });
+    });
+    if (!names[TRAP_LEVEL]) names[TRAP_LEVEL] = TRAP_NAME;
 
     var levelOf = {};
     levelOf[pack.root] = 1;

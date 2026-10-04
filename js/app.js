@@ -70,6 +70,7 @@
       lvFail: "{r} von {n} richtig, {k} braucht es. Die falschen kommen jetzt öfter in der Wiederholung.",
       lvNeed: "{k} von {n} richtig zum Bestehen", lvToPath: "Zum Pfad",
       examReadyBanner: "Prüfung bereit: {pack}, Level {i}", examReadyGo: "Jetzt prüfen",
+      trapHit: "Ein Fehler, den viele Gegner machen. Bestrafe ihn!",
       guide: "Guide", guideOpen: "Guide öffnen", guideAgain: "Nochmal ansehen", guideRead: "gelesen",
       guideIntro: "{n} Stellungen, die zeigen, worum es in dieser Eröffnung geht. Am besten vor Level 1.",
       guidePrev: "Zurück", guideNext: "Weiter", guideDone: "Fertig", guideStep: "{i} von {n}",
@@ -137,6 +138,7 @@
       lvFail: "{r} of {n} right, {k} needed. The ones you missed come back more often in your reviews.",
       lvNeed: "{k} of {n} right to pass", lvToPath: "Back to the path",
       examReadyBanner: "Test ready: {pack}, level {i}", examReadyGo: "Take it now",
+      trapHit: "A mistake many opponents make. Punish it!",
       guide: "Guide", guideOpen: "Open guide", guideAgain: "Read again", guideRead: "read",
       guideIntro: "{n} positions that show what this opening is about. Best before level 1.",
       guidePrev: "Back", guideNext: "Next", guideDone: "Done", guideStep: "{i} of {n}",
@@ -920,6 +922,7 @@
     if (!o) return [];
     var who = o.color === "w" ? t("white") : t("black");
     return [["stat", t("oppPlays", { c: who, m: S(o.edge.s) }) + (shareText(o.pos, o.edge) ? " · " + shareText(o.pos, o.edge) : "")],
+            o.edge.tr ? ["no", t("trapHit")] : null,
             o.edge.c ? ["comment", loc(o.edge.c)] : null];
   }
 

@@ -104,6 +104,9 @@ LICHESS_TOKEN=lip_xxx node tools/build-pack.js repertoire/*.pgn --explorer
 - Where your PGN has no move for your side, the script picks the best-scoring popular move and marks it **auto** (shown in the app), so you can review it.
 - Repertoire moves that score badly at that rating, or are hardly ever played, are reported.
 - Only positions that come up in at least 1 of 100 games with the opening are added (`--min-reach`).
+- **Traps:** rarer opponent replies (from 2 % of games) are added too when they are mistakes, i.e. you
+  score at least 65 % after them. Your punishing move and up to two follow-ups come with them. They form
+  the last level of the path, and the app tells you when an opponent walks into one.
 - Defaults: ratings 1200–1600, blitz + rapid, up to move 9. See `node tools/build-pack.js --help`.
 - Changed only comments, levels or a move in the PGN? `--update` rebuilds the packs and keeps the
   Lichess data already in `packs/`, no network needed.
