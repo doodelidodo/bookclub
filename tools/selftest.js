@@ -141,6 +141,19 @@ const key = (moves) => { const c = new Chess(); moves.split(" ").filter(Boolean)
     check("every own position still has one move", R.myPositions(pack).every((k) => pack.pos[k].m.length === 1));
     check("pack valid after extension", R.validatePack(pack).length === 0, R.validatePack(pack));
 
+    // Reach limit: a tree that would explode under the share rule alone stays small.
+    global.fetch = async (url) => {
+      const fen = new URL(url).searchParams.get("fen");
+      const legal = new Chess(fen).moves({ verbose: true }).slice(0, 5);
+      const moves = legal.map((m) => ({ uci: m.from + m.to, san: m.san, white: 2000, draws: 0, black: 2000 }));
+      return { ok: true, status: 200, json: async () => ({ white: 10000, draws: 0, black: 10000, moves }) };
+    };
+    const wide = R.packFromPgn('[Side "black"]\n1. e4 c6 *', Chess);
+    await B.extendWithExplorer(wide.pack, { ...opts, maxPly: 30, minShare: 0.05, minReach: 0.01 }, wide.warnings);
+    const nWide = Object.keys(wide.pack.pos).length;
+    check("reach limit keeps the tree small", nWide < 200, nWide);
+    check("Black's pack does not add other first moves", wide.pack.pos[wide.pack.root].m.length === 1, wide.pack.pos[wide.pack.root].m.map((e) => e.s));
+
     // Lichess spells castling as king-takes-rook.
     const castleFen = "r1bqk2r/pppp1ppp/2n2n2/2b1p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4";
     const norm = B.normalizeMoves(castleFen, [{ uci: "e1h1", san: "O-O", white: 5, draws: 1, black: 4 }, { uci: "zzzz", san: "Qh9" }]);
@@ -152,7 +165,7 @@ const key = (moves) => { const c = new Chess(); moves.split(" ").filter(Boolean)
       return { ok: true, status: 200, json: async () => ({ white: 300, draws: 50, black: 250, moves }) };
     };
     const castle = R.packFromPgn('[Side "white"]\n1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5 *', Chess);
-    await B.extendWithExplorer(castle.pack, { ...opts, maxPly: 8 }, castle.warnings);
+    await B.extendWithExplorer(castle.pack, { ...opts, maxPly: 8, minReach: 0 }, castle.warnings);
     const after = castle.pack.pos[key("e4 e5 Nf3 Nc6 Bc4 Bc5")];
     check("explorer castling auto-pick works", after.m.length === 1 && after.m[0].s === "O-O" && after.m[0].u === "e1g1", after.m);
 

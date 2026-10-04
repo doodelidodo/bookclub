@@ -20,6 +20,8 @@
  *   --max-ply 18               how deep the explorer extends the tree (half-moves)
  *   --min-share 0.05           smallest share of games for an opponent reply
  *   --min-games 40             smallest game count for any move taken from the explorer
+ *   --min-reach 0.01           only extend positions that come up in at least 1 of 100 games
+ *                              with this opening (product of the opponents' choices so far)
  *   --min-node-games 300       stop extending below positions with fewer games
  *   --out packs                output folder
  *   --token <t>                Lichess API token (or env LICHESS_TOKEN)
@@ -42,7 +44,7 @@ const EXPLORER = "https://explorer.lichess.ovh/lichess";
 function parseArgs(argv) {
   const opts = {
     files: [], explorer: false, ratings: "1200,1400,1600", speeds: "blitz,rapid",
-    maxPly: 18, minShare: 0.05, minGames: 40, minNodeGames: 300,
+    maxPly: 18, minShare: 0.05, minGames: 40, minNodeGames: 300, minReach: 0.01,
     out: path.join(ROOT, "packs"), token: process.env.LICHESS_TOKEN || ""
   };
   for (let i = 0; i < argv.length; i++) {
@@ -55,6 +57,7 @@ function parseArgs(argv) {
     else if (a === "--min-share") opts.minShare = Number(next());
     else if (a === "--min-games") opts.minGames = Number(next());
     else if (a === "--min-node-games") opts.minNodeGames = Number(next());
+    else if (a === "--min-reach") opts.minReach = Number(next());
     else if (a === "--out") opts.out = path.resolve(next());
     else if (a === "--token") opts.token = next();
     else if (a === "-h" || a === "--help") { printHelp(); process.exit(0); }
@@ -146,6 +149,12 @@ function normalizeMoves(fen, moves) {
 async function extendWithExplorer(pack, opts, warnings) {
   const depth = {};
   depth[pack.root] = 0;
+  // How likely this position is in a game with this opening. The opponent's
+  // first move as Black is the opening itself (1.e4 for the Caro), so it counts as 1.
+  const reach = {};
+  reach[pack.root] = 1;
+  const minReach = opts.minReach === undefined ? 0.01 : opts.minReach;
+  const setReach = (k, p) => { reach[k] = Math.max(reach[k] || 0, p); };
   const queue = [pack.root];
   const visited = new Set();
   let requests = 0;
@@ -170,7 +179,8 @@ async function extendWithExplorer(pack, opts, warnings) {
 
     const stats = {};
     moves.forEach((m) => { stats[m.uci] = m; });
-    const extend = ply < opts.maxPly && games >= opts.minNodeGames;
+    const here = reach[key] || 0;
+    const extend = ply < opts.maxPly && games >= opts.minNodeGames && here >= minReach;
 
     // Stats onto the moves we already have.
     pos.m.forEach((e) => {
@@ -215,13 +225,15 @@ async function extendWithExplorer(pack, opts, warnings) {
       if (pos.m[0]) {
         const t = pos.m[0].t;
         if (depth[t] === undefined) depth[t] = ply + 1;
+        setReach(t, here);
         queue.push(t);
       }
     } else {
-      if (extend) {
+      // As Black the PGN fixes White's first move: no 1.d4 lines in the Caro-Kann.
+      if (extend && ply > 0) {
         moves.forEach((m) => {
           const n = total(m);
-          if (n < opts.minGames || n / games < opts.minShare) return;
+          if (n < opts.minGames || n / games < opts.minShare || here * n / games < minReach) return;
           if (pos.m.some((e) => e.u === m.uci)) return;
           const board = new Chess(fen);
           const mv = board.move({ from: m.uci.slice(0, 2), to: m.uci.slice(2, 4), promotion: m.uci[4] });
@@ -234,6 +246,10 @@ async function extendWithExplorer(pack, opts, warnings) {
       pos.m.sort((a, b) => (b.n || 0) - (a.n || 0));
       pos.m.forEach((e) => {
         if (depth[e.t] === undefined) depth[e.t] = ply + 1;
+        // PGN lines are chosen on purpose: they count at least as much as the share limit.
+        let share = ply === 0 ? 1 : games > 0 && typeof e.n === "number" ? e.n / games : 1 / pos.m.length;
+        if (!e.x) share = Math.max(share, opts.minShare);
+        setReach(e.t, here * share);
         queue.push(e.t);
       });
     }
