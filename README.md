@@ -36,6 +36,11 @@ unlocks the next level. Reviews always cover everything you already know.
 Inside a level, new moves come most-common-first and only once you know the
 move before them.
 
+Each opening also has a **guide**: eight positions on the board with arrows
+and a few sentences each, showing what the opening is about before you learn
+the moves (`guides/*.js`, checked by the self-test: legal moves, arrows from
+real pieces, every position part of the repertoire).
+
 Levels are set in the PGN with a comment on the move that starts them,
 `{level 2: de: Wenn Schwarz nimmt || en: When Black takes}`; later moves of the
 same level just say `{level 2}`. Imported PGNs without tags get levels

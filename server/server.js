@@ -31,7 +31,7 @@ const DATA_DIR = path.resolve(process.env.DATA_DIR || path.join(ROOT, "data"));
 const BACKUP_DAYS = Number(process.env.BACKUP_DAYS || 60);
 const MAX_BODY = 8 * 1024 * 1024;
 const FILE = path.join(DATA_DIR, "progress.json");
-const PUBLIC = ["index.html", "manifest.webmanifest", "sw.js", "css/", "js/", "vendor/", "assets/", "packs/", "fonts/"];
+const PUBLIC = ["index.html", "manifest.webmanifest", "sw.js", "css/", "js/", "vendor/", "assets/", "packs/", "guides/", "fonts/"];
 const TYPES = {
   ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8",
   ".svg": "image/svg+xml", ".png": "image/png", ".woff2": "font/woff2", ".json": "application/json",

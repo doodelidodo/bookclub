@@ -248,6 +248,19 @@ def path_test(browser, rng, errors):
     pg.wait_for_selector(".path")
     check("path: level 1 current, rest locked", pg.locator(".lv.current").count() == 1 and pg.locator(".lv.locked").count() >= 5)
     check("path: test locked at the start", pg.locator("[data-lvexam]").is_disabled())
+    # Guide: step through to the end, it is marked as read.
+    pg.click("#guideBtn")
+    pg.wait_for_selector(".guidetitle")
+    n_steps = pg.locator(".steps i").count()
+    check("guide has steps", n_steps >= 5, n_steps)
+    check("guide draws arrows", pg.locator("#board .arrows line").count() >= 1)
+    shot(pg, "guide")
+    pg.keyboard.press("ArrowRight")
+    check("arrow key goes to the next step", pg.locator(".steps i.cur").count() == 1 and pg.locator(".steps i.done").count() == 1)
+    for _ in range(n_steps - 1):
+        pg.click("#nextBtn")
+    pg.wait_for_selector(".path")
+    check("guide marked as read", "✓" in pg.inner_text(".guidecard"))
     # Strict: even a big budget only offers level-1 moves.
     lv = pg.evaluate("""() => { const B = window.BookClub; const p = B.packs().find(x => x.id === 'vienna');
         const ids = B.pickNew(200).filter(id => id.startsWith('vienna|'));
@@ -418,6 +431,12 @@ def main():
         pp.wait_for_timeout(100)
         check("phone: tap-tap move", "Correct" in pp.inner_text("#feedback") or awaiting(pp)["a"] is None or awaiting(pp)["a"]["u"] != a["u"])
         shot(pp, "phone-train")
+        pp.click("#backBtn")
+        pp.click("[data-guide=slav]")
+        pp.wait_for_selector(".guidetitle")
+        check("phone: guide fits", no_overflow(pp))
+        shot(pp, "phone-guide", True)
+        pp.click("#backBtn")
         pp.click("#backBtn")
         pp.click("[data-browse=slav]")
         check("phone: browser fits", no_overflow(pp))

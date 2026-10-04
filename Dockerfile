@@ -9,6 +9,7 @@ COPY js ./js
 COPY vendor ./vendor
 COPY assets ./assets
 COPY packs ./packs
+COPY guides ./guides
 COPY fonts ./fonts
 COPY server ./server
 COPY repertoire ./repertoire

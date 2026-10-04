@@ -70,6 +70,11 @@
       lvFail: "{r} von {n} richtig, {k} braucht es. Die falschen kommen jetzt öfter in der Wiederholung.",
       lvNeed: "{k} von {n} richtig zum Bestehen", lvToPath: "Zum Pfad",
       examReadyBanner: "Prüfung bereit: {pack}, Level {i}", examReadyGo: "Jetzt prüfen",
+      guide: "Guide", guideOpen: "Guide öffnen", guideAgain: "Nochmal ansehen", guideRead: "gelesen",
+      guideIntro: "{n} Stellungen, die zeigen, worum es in dieser Eröffnung geht. Am besten vor Level 1.",
+      guidePrev: "Zurück", guideNext: "Weiter", guideDone: "Fertig", guideStep: "{i} von {n}",
+      legendPlan: "dein Plan", legendThreat: "Idee des Gegners", legendInfo: "Hinweis",
+      guideFinish: "Jetzt kennst du die Ideen. Die Züge dazu lernst du im Pfad.", guideToPath: "Zum Pfad",
       pathHelp: "Neue Züge kommen nur aus dem aktuellen Level. Sitzen alle seine Züge (einen Tag gehalten), kommt die Prüfung: 8 von 10 richtig öffnet das nächste Level. Wiederholt wird immer alles, was du schon kennst."
     },
     en: {
@@ -132,6 +137,11 @@
       lvFail: "{r} of {n} right, {k} needed. The ones you missed come back more often in your reviews.",
       lvNeed: "{k} of {n} right to pass", lvToPath: "Back to the path",
       examReadyBanner: "Test ready: {pack}, level {i}", examReadyGo: "Take it now",
+      guide: "Guide", guideOpen: "Open guide", guideAgain: "Read again", guideRead: "read",
+      guideIntro: "{n} positions that show what this opening is about. Best before level 1.",
+      guidePrev: "Back", guideNext: "Next", guideDone: "Done", guideStep: "{i} of {n}",
+      legendPlan: "your plan", legendThreat: "opponent's idea", legendInfo: "note",
+      guideFinish: "Now you know the ideas. The moves come in the path.", guideToPath: "To the path",
       pathHelp: "New moves only come from the current level. Once all its moves are settled (held for a day), the test opens: 8 of 10 right unlocks the next level. Reviews always cover everything you already know."
     }
   };
@@ -154,7 +164,8 @@
       settingsAt: 0,      // when language or settings last changed (for merging devices)
       resetAt: 0,         // "reset everything": older answers stay gone
       removed: {},        // packId -> when an own repertoire was removed
-      path: {}            // packId -> { passed: { levelNumber: timestamp } }
+      path: {},           // packId -> { passed: { levelNumber: timestamp } }
+      guides: {}          // packId -> when its guide was read to the end
     };
   }
   var state = load();
@@ -355,6 +366,7 @@
     });
   }
   function packById(id) { return packs.filter(function (p) { return p.id === id; })[0]; }
+  function guideFor(id) { return (window.BOOKCLUB_GUIDES || []).filter(function (g) { return g.pack === id; })[0]; }
 
   // ------------------------------------------------------------------ path / levels
   var SETTLE_BOX = 2;           // a move counts as settled once it held for a day
@@ -564,7 +576,8 @@
         levelLine(p) +
         '<div class="bar" aria-hidden="true"><span class="learned" style="width:' + pctL + '%"></span><span class="learning" style="width:' + pctG + '%"></span></div>' +
         '<div class="legend"><span><i class="learned"></i><b>' + c.learned + "</b> " + esc(t("learned")) + '</span><span><i class="learning"></i><b>' + c.learning + "</b> " + esc(t("learning")) + '</span><span><i class="new"></i><b>' + c.unseen + "</b> " + esc(t("unseen")) + "</span></div>" +
-        '<div class="row"><button class="btn small secondary" data-path="' + esc(p.id) + '">' + esc(t("path")) + '</button><button class="btn small ghost" data-train="' + esc(p.id) + '">' + esc(t("train")) + '</button><button class="btn small ghost" data-browse="' + esc(p.id) + '">' + esc(t("browse")) + "</button></div>" +
+        '<div class="row"><button class="btn small secondary" data-path="' + esc(p.id) + '">' + esc(t("path")) + '</button>' +
+        (guideFor(p.id) ? '<button class="btn small ghost" data-guide="' + esc(p.id) + '">' + esc(t("guide")) + "</button>" : "") + '<button class="btn small ghost" data-train="' + esc(p.id) + '">' + esc(t("train")) + '</button><button class="btn small ghost" data-browse="' + esc(p.id) + '">' + esc(t("browse")) + "</button></div>" +
         '<label class="toggle"><input type="checkbox" data-toggle="' + esc(p.id) + '"' + (state.off[p.id] ? "" : " checked") + "> " + esc(t("active")) + "</label>" +
         '<p class="packnote">' + esc(note) + "</p>" +
         (autos ? '<p class="packnote warn">' + esc(t("autoNote", { n: autos })) + "</p>" : "") +
@@ -585,6 +598,7 @@
     view.querySelectorAll("[data-train]").forEach(function (b) { b.onclick = function () { startSession(b.dataset.train); }; });
     view.querySelectorAll("[data-browse]").forEach(function (b) { b.onclick = function () { startBrowse(b.dataset.browse); }; });
     view.querySelectorAll("[data-path]").forEach(function (b) { b.onclick = function () { renderPath(b.dataset.path); }; });
+    view.querySelectorAll("[data-guide]").forEach(function (b) { b.onclick = function () { renderGuide(b.dataset.guide, 0); }; });
     view.querySelectorAll("[data-levelexam]").forEach(function (b) {
       b.onclick = function () { var p = packById(b.dataset.levelexam); startLevelExam(p, currentLevel(p)); };
     });
@@ -614,7 +628,15 @@
     var levels = meta[pack.id].levels, cur = currentLevel(pack), passed = passedLevels(pack);
     var html = '<section class="pathhead"><button class="btn ghost small" id="backBtn">← ' + esc(t("back")) + "</button>" +
       '<span class="eyebrow">' + esc(pack.side === "w" ? t("white") : t("black")) + "</span><h1>" + esc(loc(pack.name)) + "</h1>" +
-      '<p class="muted">' + esc(t("pathHelp")) + "</p></section><ol class=\"path\">";
+      '<p class="muted">' + esc(t("pathHelp")) + "</p></section>";
+    var g = guideFor(pack.id);
+    if (g) {
+      var read = state.guides && state.guides[pack.id];
+      html += '<section class="guidecard' + (read ? " read" : "") + '"><div><span class="eyebrow">' + esc(t("guide")) + (read ? " · " + esc(t("guideRead")) + " ✓" : "") + "</span>" +
+        "<h3>" + esc(loc(g.title)) + '</h3><p class="muted small">' + esc(t("guideIntro", { n: g.steps.length })) + "</p></div>" +
+        '<button class="btn small ' + (read ? "ghost" : "primary") + '" id="guideBtn">' + esc(read ? t("guideAgain") : t("guideOpen")) + "</button></section>";
+    }
+    html += "<ol class=\"path\">";
     levels.forEach(function (l) {
       var st = levelStats(pack, l);
       var state_ = passed[l.n] ? "done" : cur && cur.n === l.n ? "current" : "locked";
@@ -640,6 +662,7 @@
     html += "</ol>";
     view.innerHTML = html;
     on("#backBtn", renderHome);
+    on("#guideBtn", function () { renderGuide(pack.id, 0); });
     view.querySelectorAll("[data-lvexam]").forEach(function (b) {
       b.onclick = function () { var n = Number(b.dataset.lvexam); startLevelExam(pack, levels.filter(function (l) { return l.n === n; })[0]); };
     });
@@ -688,6 +711,60 @@
     var p = Math.round(edge.n / pos.g * 100);
     return t("share", { p: (p < 1 ? "<1" : p) + "%" });
   }
+
+  // ------------------------------------------------------------------ guide
+  function renderGuide(packId, index) {
+    var pack = packById(packId), g = guideFor(packId);
+    if (!pack || !g) return renderHome();
+    session = { kind: "guide", pack: pack, index: index };
+    rerender = function () { renderGuide(packId, session ? session.index : index); };
+    var step = g.steps[index];
+    var chess = new Chess();
+    var line = [];
+    step.moves.split(/\s+/).filter(Boolean).forEach(function (san) {
+      var color = chess.turn();
+      var mv = chess.move(san);
+      line.push({ san: mv.san, color: color, from: mv.from, to: mv.to });
+    });
+    var last = line[line.length - 1];
+    var last1 = index === g.steps.length - 1;
+    view.innerHTML =
+      '<div class="trainer"><div class="boardwrap"><div id="board"></div>' +
+      '<div class="legend arrows-legend"><span><i class="good"></i>' + esc(t("legendPlan")) + '</span><span><i class="bad"></i>' + esc(t("legendThreat")) + '</span><span><i class="info"></i>' + esc(t("legendInfo")) + "</span></div></div>" +
+      '<aside class="panel guide">' +
+      '<div class="crumbs"><button class="btn ghost small" id="backBtn">← ' + esc(t("back")) + '</button><span class="mono muted" style="font-size:.8rem">' + esc(t("guideStep", { i: index + 1, n: g.steps.length })) + "</span></div>" +
+      '<div class="steps" aria-hidden="true">' + g.steps.map(function (_, i) { return '<i class="' + (i < index ? "done" : i === index ? "cur" : "") + '"></i>'; }).join("") + "</div>" +
+      '<span class="eyebrow">' + esc(loc(pack.name)) + "</span>" +
+      '<h2 class="guidetitle">' + esc(loc(step.title)) + "</h2>" +
+      '<p class="guidetext">' + esc(loc(step.text)) + "</p>" +
+      '<div class="moves">' + moveListHtml(line, pack.side) + "</div>" +
+      (last1 ? '<p class="muted small">' + esc(t("guideFinish")) + "</p>" : "") +
+      '<div class="controls"><button class="btn small ghost" id="prevBtn"' + (index === 0 ? " disabled" : "") + ">← " + esc(t("guidePrev")) + "</button>" +
+      '<button class="btn small primary" id="nextBtn">' + esc(last1 ? t("guideToPath") : t("guideNext") + " →") + "</button></div>" +
+      "</aside></div>";
+    mountBoard(document.getElementById("board"), pack.side, function () {});
+    board.setPosition(chess.fen(), { lastMove: last ? [last.from, last.to] : null, movable: null });
+    (step.highlight || []).forEach(function (sq) { board.mark(sq, "hint"); });
+    (step.arrows || []).forEach(function (a) {
+      var m = /^(?:([xi]):)?([a-h][1-8])([a-h][1-8])$/.exec(a);
+      if (m) board.arrow(m[2], m[3], m[1] === "x" ? "bad" : m[1] === "i" ? "info" : "good");
+    });
+    on("#backBtn", function () { renderPath(packId); });
+    on("#prevBtn", function () { renderGuide(packId, Math.max(0, index - 1)); });
+    on("#nextBtn", function () {
+      if (!last1) return renderGuide(packId, index + 1);
+      state.guides = state.guides || {};
+      state.guides[packId] = Date.now();
+      save();
+      renderPath(packId);
+    });
+    window.scrollTo(0, 0);
+  }
+  document.addEventListener("keydown", function (ev) {
+    if (!session || session.kind !== "guide" || ev.altKey || ev.ctrlKey || ev.metaKey) return;
+    if (ev.key === "ArrowRight") { var n = document.getElementById("nextBtn"); if (n) n.click(); }
+    if (ev.key === "ArrowLeft") { var p = document.getElementById("prevBtn"); if (p && !p.disabled) p.click(); }
+  });
 
   // ------------------------------------------------------------------ training session
   function startSession(onlyPack) {

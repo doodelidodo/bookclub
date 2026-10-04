@@ -76,6 +76,13 @@
     });
     out.path = path;
 
+    // Guides read: union, latest time.
+    var guides = {};
+    [a.guides || {}, b.guides || {}].forEach(function (src) {
+      Object.keys(src).forEach(function (id) { guides[id] = Math.max(num(guides[id]), num(src[id])); });
+    });
+    out.guides = guides;
+
     var cards = {};
     var ca = a.cards || {}, cb = b.cards || {};
     Object.keys(ca).concat(Object.keys(cb)).forEach(function (id) {

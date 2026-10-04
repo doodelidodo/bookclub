@@ -79,7 +79,7 @@ jobs:
       - name: Collect the site
         run: |
           mkdir _site
-          cp -r index.html manifest.webmanifest sw.js css js vendor assets packs fonts _site/
+          cp -r index.html manifest.webmanifest sw.js css js vendor assets packs guides fonts _site/
       - uses: actions/upload-pages-artifact@v3
       - id: deploy
         uses: actions/deploy-pages@v4

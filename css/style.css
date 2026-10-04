@@ -195,6 +195,30 @@ p { margin: 0; }
 .lvhint.ready { color: var(--coral); }
 .crown { font-size: 3.4rem; line-height: 1; color: var(--amber); }
 
+/* --- Guide ------------------------------------------------------------------- */
+.guidecard {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px 20px;
+  max-width: 680px; margin-bottom: 26px; padding: 16px 18px; border-radius: 16px;
+  border: 1px solid var(--knight); background: color-mix(in srgb, var(--knight) 8%, transparent);
+}
+.guidecard.read { border-color: var(--rule); background: transparent; }
+.guidecard > div { display: grid; gap: 4px; min-width: 0; flex: 1 1 260px; }
+.guidecard h3 { font-size: 1.2rem; }
+.guidecard .small { font-size: .9rem; }
+.panel.guide { gap: 12px; }
+.guidetitle { font-size: 1.5rem; line-height: 1.2; }
+.guidetext { font-size: 1.02rem; line-height: 1.6; }
+.panel .small { font-size: .9rem; }
+.steps { display: flex; gap: 5px; }
+.steps i { flex: 1; height: 4px; border-radius: 99px; background: var(--panel-2); }
+.steps i.done { background: var(--good); }
+.steps i.cur { background: var(--knight); }
+.arrows-legend { margin-top: 10px; justify-content: center; }
+.arrows-legend i { width: 14px; height: 4px; border-radius: 2px; }
+.arrows-legend i.good { background: #3fb57f; }
+.arrows-legend i.bad { background: var(--coral); }
+.arrows-legend i.info { background: var(--knight); }
+
 /* --- Trainingsansicht ----------------------------------------------------- */
 .trainer { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 26px; align-items: start; }
 .trainer > * { min-width: 0; }

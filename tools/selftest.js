@@ -143,6 +143,40 @@ const key = (moves) => { const c = new Chess(); moves.split(" ").filter(Boolean)
     check("reset clears passed levels", Object.keys(S.merge({ v: 1, cards: {}, path: { vienna: { passed: { 1: 100 } } } }, { v: 1, cards: {}, resetAt: 150 }).path).length === 0);
   }
 
+  section("4c guides");
+  {
+    global.window = global.window || {};
+    window.BOOKCLUB_GUIDES = [];
+    for (const f of ["vienna", "caro-kann", "slav"]) eval(fs.readFileSync(path.join(ROOT, "guides", f + ".js"), "utf8"));
+    check("three guides", window.BOOKCLUB_GUIDES.length === 3);
+    for (const g of window.BOOKCLUB_GUIDES) {
+      const packSrc = fs.readFileSync(path.join(ROOT, "packs", g.pack + ".js"), "utf8");
+      const pk = JSON.parse(packSrc.slice(packSrc.indexOf(".push(") + 6, packSrc.lastIndexOf(");")));
+      check(g.pack + " guide has 5-10 steps", g.steps.length >= 5 && g.steps.length <= 10, g.steps.length);
+      g.steps.forEach((st, i) => {
+        const where = g.pack + " step " + (i + 1);
+        const c = new Chess();
+        let ok = true;
+        for (const san of st.moves.split(/\s+/).filter(Boolean)) {
+          try { c.move(san); } catch (e) { ok = false; check(where + ": legal move " + san, false); break; }
+        }
+        if (!ok) return;
+        check(where + ": texts in both languages", st.title.de && st.title.en && st.text.de && st.text.en && st.text.de !== st.text.en);
+        (st.arrows || []).forEach((a) => {
+          const m = /^(?:([xi]):)?([a-h][1-8])([a-h][1-8])$/.exec(a);
+          check(where + ": arrow " + a + " well formed", !!m && m[2] !== m[3]);
+          if (!m || m[1]) return;
+          // A green arrow is a plan: a piece of the side it belongs to must stand on the start square.
+          check(where + ": arrow " + a + " starts on a piece", !!c.get(m[2]), a);
+        });
+        (st.highlight || []).forEach((sq) => check(where + ": square " + sq, /^[a-h][1-8]$/.test(sq)));
+        // The guide's position should be part of the repertoire (or right next to it).
+        const k = R.fenKey(c.fen());
+        check(where + ": position is in the repertoire", !!pk.pos[k], st.moves);
+      });
+    }
+  }
+
   section("5 explorer extension (fake explorer)");
   {
     // Fake explorer: every legal move, the first ones most popular; one move scores terribly.
